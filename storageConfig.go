@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -27,7 +26,7 @@ func NewStreamCore() *StorageST {
 	flag.Parse()
 
 	var tmp StorageST
-	data, err := ioutil.ReadFile(configFile)
+	data, err := os.ReadFile(configFile)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"module": "config",
@@ -90,7 +89,7 @@ func (obj *StorageST) SaveConfig() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(configFile, res, 0644)
+	err = os.WriteFile(configFile, res, 0644)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"module": "config",
