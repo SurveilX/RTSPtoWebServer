@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"strconv"
 )
 
 //HTTPAPIServerStreams function return stream list
@@ -177,7 +178,55 @@ func HTTPAPIServerStreamDelete(c *gin.Context) {
 	c.IndentedJSON(200, Message{Status: 1, Payload: Success})
 }
 
-//HTTPAPIServerStreamDelete function reload stream
+//HTTPAPIServerStreamViewerCount function returns viewer count for a stream
+func HTTPAPIServerStreamViewerCount(c *gin.Context) {
+	count, err := Storage.StreamViewerCount(c.Param("uuid"))
+	if err != nil {
+		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})
+		log.WithFields(logrus.Fields{
+			"module": "http_stream",
+			"stream": c.Param("uuid"),
+			"func":   "HTTPAPIServerStreamViewerCount",
+			"call":   "StreamViewerCount",
+		}).Errorln(err.Error())
+		return
+	}
+	c.IndentedJSON(200, Message{Status: 1, Payload: count})
+}
+
+//HTTPAPIServerStreamSafeDelete function deletes stream only if no viewers
+func HTTPAPIServerStreamSafeDelete(c *gin.Context) {
+	count, err := Storage.StreamViewerCount(c.Param("uuid"))
+	if err != nil {
+		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})
+		log.WithFields(logrus.Fields{
+			"module": "http_stream",
+			"stream": c.Param("uuid"),
+			"func":   "HTTPAPIServerStreamSafeDelete",
+			"call":   "StreamViewerCount",
+		}).Errorln(err.Error())
+		return
+	}
+	
+	if count == 0 {
+		err := Storage.StreamDelete(c.Param("uuid"))
+		if err != nil {
+			c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})
+			log.WithFields(logrus.Fields{
+				"module": "http_stream",
+				"stream": c.Param("uuid"),
+				"func":   "HTTPAPIServerStreamSafeDelete",
+				"call":   "StreamDelete",
+			}).Errorln(err.Error())
+			return
+		}
+		c.IndentedJSON(200, Message{Status: 1, Payload: Success})
+	} else {
+		c.IndentedJSON(200, Message{Status: 1, Payload: "Stream has active viewers: " + strconv.Itoa(count)})
+	}
+}
+
+//HTTPAPIServerStreamReload function reload stream
 func HTTPAPIServerStreamReload(c *gin.Context) {
 	err := Storage.StreamReload(c.Param("uuid"))
 	if err != nil {

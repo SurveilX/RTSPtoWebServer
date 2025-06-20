@@ -1,7 +1,5 @@
 {
-  "channel_defaults": {
-    "on_demand": true
-  },
+  "channel_defaults": {},
   "server": {
     "debug": true,
     "http_debug": false,

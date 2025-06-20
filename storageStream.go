@@ -138,3 +138,18 @@ func (obj *StorageST) StreamInfo(uuid string) (*StreamST, error) {
 	}
 	return nil, ErrorStreamNotFound
 }
+
+//StreamViewerCount counts all viewers across all channels of a stream
+func (obj *StorageST) StreamViewerCount(uuid string) (int, error) {
+	obj.mutex.RLock()
+	defer obj.mutex.RUnlock()
+	
+	if tmp, ok := obj.Streams[uuid]; ok {
+		totalViewers := 0
+		for _, channel := range tmp.Channels {
+			totalViewers += len(channel.clients)
+		}
+		return totalViewers, nil
+	}
+	return 0, ErrorStreamNotFound
+}

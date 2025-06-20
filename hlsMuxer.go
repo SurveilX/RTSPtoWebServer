@@ -155,6 +155,10 @@ func (element *MuxerHLS) GetFragment(segment int, fragment int) ([]*av.Packet, e
 
 //GetIndexM3u8 func
 func (element *MuxerHLS) GetIndexM3u8(needMSN int, needPart int) (string, error) {
+	if element == nil {
+		return "", ErrorStreamNotFound
+	}
+
 	element.mutex.Lock()
 	if len(element.CacheM3U8) != 0 && ((needMSN == -1 || needPart == -1) || (needMSN-element.MSN > 1) || (needMSN == element.MSN && needPart < element.CurrentFragmentID)) {
 		element.mutex.Unlock()

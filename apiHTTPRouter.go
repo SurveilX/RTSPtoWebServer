@@ -70,6 +70,13 @@ func HTTPAPIServer() {
 	privat.GET("/stream/:uuid/delete", HTTPAPIServerStreamDelete)
 	privat.GET("/stream/:uuid/reload", HTTPAPIServerStreamReload)
 	privat.GET("/stream/:uuid/info", HTTPAPIServerStreamInfo)
+	privat.GET("/stream/:uuid/viewers", HTTPAPIServerStreamViewerCount)
+	privat.GET("/stream/:uuid/safe-delete", HTTPAPIServerStreamSafeDelete)
+
+	/*
+		Stream Testing
+	*/
+	public.POST("/stream/test", HTTPAPIServerStreamTest)
 
 	/*
 		Streams Multi Control elements

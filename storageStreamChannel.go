@@ -376,6 +376,9 @@ func (obj *StorageST) HLSMuxerM3U8(uuid string, channelID string, msn, part int)
 	obj.mutex.Unlock()
 	if ok {
 		if channelTmp, ok := tmp.Channels[channelID]; ok {
+			if channelTmp.hlsMuxer == nil {
+				return "", ErrorStreamNotFound
+			}
 			index, err := channelTmp.hlsMuxer.GetIndexM3u8(msn, part)
 			return index, err
 		}
@@ -389,6 +392,9 @@ func (obj *StorageST) HLSMuxerSegment(uuid string, channelID string, segment int
 	defer obj.mutex.Unlock()
 	if tmp, ok := obj.Streams[uuid]; ok {
 		if channelTmp, ok := tmp.Channels[channelID]; ok {
+			if channelTmp.hlsMuxer == nil {
+				return nil, ErrorStreamChannelNotFound
+			}
 			return channelTmp.hlsMuxer.GetSegment(segment)
 		}
 	}
@@ -402,6 +408,9 @@ func (obj *StorageST) HLSMuxerFragment(uuid string, channelID string, segment, f
 	obj.mutex.Unlock()
 	if ok {
 		if channelTmp, ok := tmp.Channels[channelID]; ok {
+			if channelTmp.hlsMuxer == nil {
+				return nil, ErrorStreamChannelNotFound
+			}
 			packet, err := channelTmp.hlsMuxer.GetFragment(segment, fragment)
 			return packet, err
 		}

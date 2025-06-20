@@ -103,8 +103,10 @@ func StreamServerRunStream(streamID string, channelID string, opt *ChannelST) (i
 	var ProbeCount int
 	var ProbeFrame int
 	var ProbePTS time.Duration
+
 	Storage.NewHLSMuxer(streamID, channelID)
 	defer Storage.HLSMuxerClose(streamID, channelID)
+
 	for {
 		select {
 		//Check stream have clients
