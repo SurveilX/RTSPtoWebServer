@@ -153,3 +153,72 @@ func (obj *StorageST) StreamViewerCount(uuid string) (int, error) {
 	}
 	return 0, ErrorStreamNotFound
 }
+
+//StreamChannelsAdd add multiple channels to existing stream
+func (obj *StorageST) StreamChannelsAdd(uuid string, channels map[string]ChannelST, overwrite bool) (map[string]Message, error) {
+	obj.mutex.Lock()
+	defer obj.mutex.Unlock()
+	
+	if _, ok := obj.Streams[uuid]; !ok {
+		return nil, ErrorStreamNotFound
+	}
+
+	if obj.Streams[uuid].Channels == nil {
+		stream := obj.Streams[uuid]
+		stream.Channels = make(map[string]ChannelST)
+		obj.Streams[uuid] = stream
+	}
+	
+	results := make(map[string]Message)
+	addedCount := 0
+	skippedCount := 0
+	
+	for channelID, channelConfig := range channels {
+		if _, exists := obj.Streams[uuid].Channels[channelID]; exists && !overwrite {
+			skippedCount++
+			continue
+		}
+		
+		if existingChannel, exists := obj.Streams[uuid].Channels[channelID]; exists && overwrite {
+			if existingChannel.runLock {
+				existingChannel.signals <- SignalStreamStop
+			}
+		}
+		
+		newChannel := obj.StreamChannelMake(channelConfig)
+		stream := obj.Streams[uuid]
+		stream.Channels[channelID] = newChannel
+		obj.Streams[uuid] = stream
+		
+		if !newChannel.OnDemand {
+			newChannel.runLock = true
+			stream = obj.Streams[uuid]
+			stream.Channels[channelID] = newChannel
+			obj.Streams[uuid] = stream
+			go StreamServerRunStreamDo(uuid, channelID)
+		}
+		
+		addedCount++
+		results[channelID] = Message{Status: 1, Payload: "Channel added successfully"}
+	}
+	
+	if skippedCount > 0 {
+		results["_summary"] = Message{
+			Status: 1, 
+			Payload: map[string]interface{}{
+				"added":   addedCount,
+				"skipped": skippedCount,
+				"message": "Some channels were skipped because they already exist. Use overwrite=true to replace them.",
+			},
+		}
+	}
+	
+	if addedCount > 0 {
+		err := obj.SaveConfig()
+		if err != nil {
+			return results, err
+		}
+	}
+	
+	return results, nil
+}

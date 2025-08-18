@@ -3,3 +3,8 @@ RTSPtoWeb
 
 # binary
 rtspweb
+
+.env
+
+recordings/
+vss/

@@ -37,6 +37,7 @@ type StreamInfo struct {
 	VideoCodec  string   `json:"video_codec,omitempty"`
 	AudioCodec  string   `json:"audio_codec,omitempty"`
 	Resolution  string   `json:"resolution,omitempty"`
+	FPS         int      `json:"fps,omitempty"`
 	Duration    string   `json:"test_duration"`
 	PacketCount int      `json:"packet_count"`
 }
@@ -91,6 +92,42 @@ func extractHostFromURL(streamURL string) string {
 		return parsedURL.Host
 	}
 	return "unknown"
+}
+
+// getCodecName converts codec type to readable name
+func getCodecName(codecType string) string {
+	codecType = strings.ToLower(codecType)
+	
+	// Handle different H.264 variations
+	if strings.Contains(codecType, "h264") || 
+	   strings.Contains(codecType, "avc") ||
+	   strings.Contains(codecType, "h.264") {
+		return "h264"
+	}
+	
+	// Handle different H.265 variations  
+	if strings.Contains(codecType, "h265") || 
+	   strings.Contains(codecType, "hevc") ||
+	   strings.Contains(codecType, "h.265") {
+		return "h265"
+	}
+	
+	// Handle audio codecs
+	if strings.Contains(codecType, "aac") {
+		return "aac"
+	}
+	if strings.Contains(codecType, "pcm") || strings.Contains(codecType, "pcma") || strings.Contains(codecType, "pcmu") {
+		return "pcm"
+	}
+	if strings.Contains(codecType, "g711") {
+		return "g711"
+	}
+	if strings.Contains(codecType, "g722") {
+		return "g722"
+	}
+	
+	// Return original if no match
+	return codecType
 }
 
 // testStreamConnection performs comprehensive testing of the stream
@@ -241,11 +278,14 @@ func testStreamConnection(streamURL string) StreamTestResult {
 	var streamInfo StreamInfo
 	streamInfo.URL = streamURL
 	
-	streamTimeout := time.NewTimer(15 * time.Second)
+	streamTimeout := time.NewTimer(20 * time.Second)
 	defer streamTimeout.Stop()
 
 	codecReceived := false
 	packetsReceived := false
+
+	var fpsCalculationStart time.Time
+	var frameCount int
 
 	go func() {
 		for {
@@ -257,13 +297,22 @@ func testStreamConnection(streamURL string) StreamTestResult {
 			case signal := <-rtspClient.Signals:
 				if signal == rtspv2.SignalCodecUpdate {
 					codecReceived = true
-					if len(rtspClient.CodecData) > 0 {
-						for _, codec := range rtspClient.CodecData {
-							if codec.Type().IsVideo() {
-								streamInfo.VideoCodec = codec.Type().String()
-							} else if codec.Type().IsAudio() {
-								streamInfo.AudioCodec = codec.Type().String()
-							}
+					log.WithFields(logrus.Fields{
+						"module": "stream_test",
+						"func":   "testStreamConnection",
+					}).Debugf("Codec update signal received: %d codecs", len(rtspClient.CodecData))
+					
+					for i, codec := range rtspClient.CodecData {
+						codecTypeStr := codec.Type().String()
+						log.WithFields(logrus.Fields{
+							"module": "stream_test",
+							"func":   "testStreamConnection",
+						}).Debugf("Updated Codec %d: Type=%s, IsVideo=%v, IsAudio=%v", i, codecTypeStr, codec.Type().IsVideo(), codec.Type().IsAudio())
+						
+						if codec.Type().IsVideo() {
+							streamInfo.VideoCodec = getCodecName(codecTypeStr)
+						} else if codec.Type().IsAudio() {
+							streamInfo.AudioCodec = getCodecName(codecTypeStr)
 						}
 					}
 				}
@@ -271,7 +320,44 @@ func testStreamConnection(streamURL string) StreamTestResult {
 				if packet != nil {
 					packetCount++
 					packetsReceived = true
-					if packetCount >= 10 {
+
+					if packet.Idx == 0 {
+						frameCount++
+						
+						if fpsCalculationStart.IsZero() {
+							fpsCalculationStart = time.Now()
+						}
+						
+						elapsed := time.Since(fpsCalculationStart).Seconds()
+						if frameCount >= 10 && elapsed >= 1.0 {
+							calculatedFPS := int(float64(frameCount) / elapsed)
+							if calculatedFPS >= 1 && calculatedFPS <= 120 {
+								streamInfo.FPS = calculatedFPS
+								log.WithFields(logrus.Fields{
+									"module": "stream_test",
+									"func":   "testStreamConnection",
+								}).Debugf("Calculated FPS: %d (frames: %d, elapsed: %.2fs)", calculatedFPS, frameCount, elapsed)
+							}
+						}
+					}
+
+					if !codecReceived && len(rtspClient.CodecData) > 0 {
+						codecReceived = true
+						for i, codec := range rtspClient.CodecData {
+							codecTypeStr := codec.Type().String()
+							log.WithFields(logrus.Fields{
+								"module": "stream_test",
+								"func":   "testStreamConnection",
+							}).Debugf("Packet-triggered Codec %d: Type=%s, IsVideo=%v, IsAudio=%v", i, codecTypeStr, codec.Type().IsVideo(), codec.Type().IsAudio())
+							
+							if codec.Type().IsVideo() {
+								streamInfo.VideoCodec = getCodecName(codecTypeStr)
+							} else if codec.Type().IsAudio() {
+								streamInfo.AudioCodec = getCodecName(codecTypeStr)
+							}
+						}
+					}
+					if packetCount >= 30 {
 						return
 					}
 				}
@@ -316,8 +402,16 @@ func testStreamConnection(streamURL string) StreamTestResult {
 	streamInfo.Duration = duration.String()
 	streamInfo.PacketCount = packetCount
 
+	log.WithFields(logrus.Fields{
+		"module": "stream_test",
+		"func":   "testStreamConnection",
+	}).Debugf("Final codec info - Video: %s, Audio: %s", streamInfo.VideoCodec, streamInfo.AudioCodec)
+
 	if packetCount > 0 {
 		step5.Details = fmt.Sprintf("Received %d packets in %v", packetCount, duration)
+		if streamInfo.VideoCodec != "" {
+			step5.Details += fmt.Sprintf(", Video codec: %s", streamInfo.VideoCodec)
+		}
 		result.TestSteps = append(result.TestSteps, step5)
 		result.Success = true
 		result.Message = "Stream test successful! The camera is accessible and streaming video."
@@ -326,6 +420,12 @@ func testStreamConnection(streamURL string) StreamTestResult {
 		step5.Status = "warning"
 		step5.Message = "Stream setup successful but limited data"
 		step5.Details = "Codec information received but no video packets within test period"
+		if streamInfo.VideoCodec != "" {
+			step5.Details += fmt.Sprintf(", Video codec: %s", streamInfo.VideoCodec)
+		}
+		if streamInfo.FPS > 0 {
+			step5.Details += fmt.Sprintf(", FPS: %d", streamInfo.FPS)
+		}
 		result.TestSteps = append(result.TestSteps, step5)
 		result.Success = true
 		result.Message = "Stream connection successful but limited video data received. The stream may work but could have bandwidth issues."

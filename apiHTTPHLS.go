@@ -33,6 +33,19 @@ func HTTPAPIServerStreamHLSM3U8(c *gin.Context) {
 		return
 	}
 
+	// Track HLS viewer
+	viewerID := hlsTracker.TrackViewer(
+		c.Param("uuid"), 
+		c.Param("channel"), 
+		c.ClientIP(), 
+		c.GetHeader("User-Agent"),
+	)
+
+	requestLogger.WithFields(logrus.Fields{
+		"viewer_id": viewerID,
+		"user_agent": c.GetHeader("User-Agent"),
+	}).Debugln("HLS M3U8 request tracked")
+
 	c.Header("Content-Type", "application/vnd.apple.mpegurl")
 	Storage.StreamChannelRun(c.Param("uuid"), c.Param("channel"))
 	//If stream mode on_demand need wait ready segment's
@@ -76,6 +89,20 @@ func HTTPAPIServerStreamHLSTS(c *gin.Context) {
 		}).Errorln(ErrorStreamNotFound.Error())
 		return
 	}
+
+	// Track HLS viewer for segment requests too
+	viewerID := hlsTracker.TrackViewer(
+		c.Param("uuid"), 
+		c.Param("channel"), 
+		c.ClientIP(), 
+		c.GetHeader("User-Agent"),
+	)
+
+	requestLogger.WithFields(logrus.Fields{
+		"viewer_id": viewerID,
+		"segment": c.Param("seq"),
+	}).Debugln("HLS segment request tracked")
+
 	codecs, err := Storage.StreamChannelCodecs(c.Param("uuid"), c.Param("channel"))
 	if err != nil {
 		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})

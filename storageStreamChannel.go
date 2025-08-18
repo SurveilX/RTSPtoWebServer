@@ -321,6 +321,20 @@ func (obj *StorageST) StreamChannelDelete(uuid string, channelID string) error {
 	return ErrorStreamNotFound
 }
 
+//StreamChannelViewerCount counts viewers for a specific channel
+func (obj *StorageST) StreamChannelViewerCount(uuid string, channelID string) (int, error) {
+	obj.mutex.RLock()
+	defer obj.mutex.RUnlock()
+	
+	if tmp, ok := obj.Streams[uuid]; ok {
+		if channelTmp, ok := tmp.Channels[channelID]; ok {
+			return len(channelTmp.clients), nil
+		}
+		return 0, ErrorStreamChannelNotFound
+	}
+	return 0, ErrorStreamNotFound
+}
+
 // NewHLSMuxer new muxer init
 func (obj *StorageST) NewHLSMuxer(uuid string, channelID string) {
 	obj.mutex.Lock()

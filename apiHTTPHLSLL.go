@@ -31,6 +31,18 @@ func HTTPAPIServerStreamHLSLLInit(c *gin.Context) {
 		return
 	}
 
+	// Track HLSLL viewer for init requests
+	viewerID := hlsTracker.TrackViewer(
+		c.Param("uuid"), 
+		c.Param("channel"), 
+		c.ClientIP(), 
+		c.GetHeader("User-Agent"),
+	)
+
+	requestLogger.WithFields(logrus.Fields{
+		"viewer_id": viewerID,
+	}).Debugln("HLSLL init request tracked")
+
 	c.Header("Content-Type", "application/x-mpegURL")
 	Storage.StreamChannelRun(c.Param("uuid"), c.Param("channel"))
 	codecs, err := Storage.StreamChannelCodecs(c.Param("uuid"), c.Param("channel"))
@@ -78,6 +90,21 @@ func HTTPAPIServerStreamHLSLLM3U8(c *gin.Context) {
 		}).Errorln(ErrorStreamNotFound.Error())
 		return
 	}
+
+	// Track HLSLL viewer for M3U8 requests
+	viewerID := hlsTracker.TrackViewer(
+		c.Param("uuid"), 
+		c.Param("channel"), 
+		c.ClientIP(), 
+		c.GetHeader("User-Agent"),
+	)
+
+	requestLogger.WithFields(logrus.Fields{
+		"viewer_id": viewerID,
+		"msn": c.DefaultQuery("_HLS_msn", "-1"),
+		"part": c.DefaultQuery("_HLS_part", "-1"),
+	}).Debugln("HLSLL M3U8 request tracked")
+
 	c.Header("Content-Type", "application/x-mpegURL")
 	Storage.StreamChannelRun(c.Param("uuid"), c.Param("channel"))
 	index, err := Storage.HLSMuxerM3U8(c.Param("uuid"), c.Param("channel"), stringToInt(c.DefaultQuery("_HLS_msn", "-1")), stringToInt(c.DefaultQuery("_HLS_part", "-1")))
@@ -113,6 +140,20 @@ func HTTPAPIServerStreamHLSLLM4Segment(c *gin.Context) {
 		}).Errorln(ErrorStreamNotFound.Error())
 		return
 	}
+
+	// Track HLSLL viewer for segment requests
+	viewerID := hlsTracker.TrackViewer(
+		c.Param("uuid"), 
+		c.Param("channel"), 
+		c.ClientIP(), 
+		c.GetHeader("User-Agent"),
+	)
+
+	requestLogger.WithFields(logrus.Fields{
+		"viewer_id": viewerID,
+		"segment": c.Param("segment"),
+	}).Debugln("HLSLL segment request tracked")
+
 	codecs, err := Storage.StreamChannelCodecs(c.Param("uuid"), c.Param("channel"))
 	if err != nil {
 		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})
@@ -178,6 +219,21 @@ func HTTPAPIServerStreamHLSLLM4Fragment(c *gin.Context) {
 		}).Errorln(ErrorStreamNotFound.Error())
 		return
 	}
+
+	// Track HLSLL viewer for fragment requests
+	viewerID := hlsTracker.TrackViewer(
+		c.Param("uuid"), 
+		c.Param("channel"), 
+		c.ClientIP(), 
+		c.GetHeader("User-Agent"),
+	)
+
+	requestLogger.WithFields(logrus.Fields{
+		"viewer_id": viewerID,
+		"segment": c.Param("segment"),
+		"fragment": c.Param("fragment"),
+	}).Debugln("HLSLL fragment request tracked")
+
 	codecs, err := Storage.StreamChannelCodecs(c.Param("uuid"), c.Param("channel"))
 	if err != nil {
 		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})

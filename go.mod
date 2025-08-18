@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.24.3
 
 require (
+	github.com/aws/aws-sdk-go v1.44.327
 	github.com/deepch/vdk v0.0.27
 	github.com/gin-gonic/autotls v1.1.2
 	github.com/gin-gonic/gin v1.10.1
@@ -13,6 +14,7 @@ require (
 	github.com/imdario/mergo v0.3.16
 	github.com/liip/sheriff v0.12.0
 	github.com/sirupsen/logrus v1.9.3
+	github.com/joho/godotenv v1.5.1
 )
 
 require (

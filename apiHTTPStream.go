@@ -226,6 +226,58 @@ func HTTPAPIServerStreamSafeDelete(c *gin.Context) {
 	}
 }
 
+//HTTPAPIServerStreamChannelsAdd function add multiple channels to existing stream
+func HTTPAPIServerStreamChannelsAdd(c *gin.Context) {
+	requestLogger := log.WithFields(logrus.Fields{
+		"module": "http_stream",
+		"stream": c.Param("uuid"),
+		"func":   "HTTPAPIServerStreamChannelsAdd",
+	})
+
+	var payload map[string]ChannelST
+	err := c.BindJSON(&payload)
+	if err != nil {
+		c.IndentedJSON(400, Message{Status: 0, Payload: err.Error()})
+		requestLogger.WithFields(logrus.Fields{
+			"call": "BindJSON",
+		}).Errorln(err.Error())
+		return
+	}
+	
+	if len(payload) < 1 {
+		c.IndentedJSON(400, Message{Status: 0, Payload: "No channels provided"})
+		requestLogger.WithFields(logrus.Fields{
+			"call": "len(payload)",
+		}).Errorln("No channels provided")
+		return
+	}
+
+	overwrite := c.Query("overwrite") == "true"
+	results, err := Storage.StreamChannelsAdd(c.Param("uuid"), payload, overwrite)
+	if err != nil {
+		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})
+		requestLogger.WithFields(logrus.Fields{
+			"call": "StreamChannelsAdd",
+		}).Errorln(err.Error())
+		return
+	}
+	
+	// Check if any operations failed
+	hasErrors := false
+	for key, result := range results {
+		if key != "_summary" && result.Status == 0 {
+			hasErrors = true
+			break
+		}
+	}
+	
+	if hasErrors {
+		c.IndentedJSON(200, Message{Status: 0, Payload: results})
+	} else {
+		c.IndentedJSON(200, Message{Status: 1, Payload: results})
+	}
+}
+
 //HTTPAPIServerStreamReload function reload stream
 func HTTPAPIServerStreamReload(c *gin.Context) {
 	err := Storage.StreamReload(c.Param("uuid"))
