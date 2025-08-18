@@ -322,7 +322,7 @@ func (rm *RecordingManager) startNativeRecording(session *RecordingSession) erro
 				}).Errorln("Recording failed: no video data")
 				return
 			case packet := <-ch:
-				if !packet.IsVideo {
+				if packet.Idx != 0 {
 					continue
 				}
 
