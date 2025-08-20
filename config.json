@@ -27,31 +27,5 @@
     },
     "webrtc_port_max": 0,
     "webrtc_port_min": 0
-  },
-  "streams": {
-    "6838061a3833b2b88f6b731e": {
-      "channels": {
-        "689efc1e2c903b66776c0ffb": {
-          "name": "Recording Channel 689efc1e2c903b66776c0ffb",
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        }
-      },
-      "name": "Recording Stream 6838061a3833b2b88f6b731e"
-    },
-    "68a3206369304b20a85a1655": {
-      "channels": {
-        "68a3219f69304b20a85a1668": {
-          "name": "Camera 68a3219f69304b20a85a1668",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=13\u0026streamType=main"
-        },
-        "68a321af69304b20a85a1669": {
-          "name": "Camera 68a321af69304b20a85a1669",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=14\u0026streamType=main"
-        }
-      },
-      "name": "Stream for 68a3206369304b20a85a1655"
-    }
   }
 }

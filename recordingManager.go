@@ -326,7 +326,7 @@ func (rm *RecordingManager) autoStopRecording(session *RecordingSession) {
 		"status":     session.Status,
 	}).Warnln("Auto-stopping recording after 45 seconds timeout")
 
-	_, _, err := rm.StopRecordingNoIncidentWithNext(session.StreamID, session.ChannelID, true)
+	_, _, err := rm.StopRecordingNoIncidentWithNext(session.StreamID, session.ChannelID, false)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"module":     "recording",
