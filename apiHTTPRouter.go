@@ -41,26 +41,6 @@ func HTTPAPIServer() {
 	}
 
 	/*
-		Static HTML Files Demo Mode
-	*/
-
-	if Storage.ServerHTTPDemo() {
-		public.LoadHTMLGlob(Storage.ServerHTTPDir() + "/templates/*")
-		public.GET("/", HTTPAPIServerIndex)
-		public.GET("/pages/stream/list", HTTPAPIStreamList)
-		public.GET("/pages/stream/add", HTTPAPIAddStream)
-		public.GET("/pages/stream/edit/:uuid", HTTPAPIEditStream)
-		public.GET("/pages/player/hls/:uuid/:channel", HTTPAPIPlayHls)
-		public.GET("/pages/player/mse/:uuid/:channel", HTTPAPIPlayMse)
-		public.GET("/pages/player/webrtc/:uuid/:channel", HTTPAPIPlayWebrtc)
-		public.GET("/pages/multiview", HTTPAPIMultiview)
-		public.Any("/pages/multiview/full", HTTPAPIFullScreenMultiView)
-		public.GET("/pages/documentation", HTTPAPIServerDocumentation)
-		public.GET("/pages/player/all/:uuid/:channel", HTTPAPIPlayAll)
-		public.StaticFS("/static", http.Dir(Storage.ServerHTTPDir()+"/static"))
-	}
-
-	/*
 		Stream Control elements
 	*/
 
@@ -80,6 +60,7 @@ func HTTPAPIServer() {
 
 	privat.POST("/stream/:uuid/channel/:channel/recording/start", HTTPAPIServerStartRecording)
 	privat.POST("/stream/:uuid/channel/:channel/recording/stop", HTTPAPIServerStopRecording)
+	privat.DELETE("/stream/:uuid/channel/:channel/recording/remove", HTTPAPIServerRemoveRecording)
 	privat.GET("/stream/:uuid/channel/:channel/recording/status", HTTPAPIServerRecordingStatus)
 
 	/*

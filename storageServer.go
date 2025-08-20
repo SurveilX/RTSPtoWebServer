@@ -35,13 +35,6 @@ func (obj *StorageST) ServerLogLevel() logrus.Level {
 	return obj.Server.LogLevel
 }
 
-//ServerHTTPDemo read demo options
-func (obj *StorageST) ServerHTTPDemo() bool {
-	obj.mutex.RLock()
-	defer obj.mutex.RUnlock()
-	return obj.Server.HTTPDemo
-}
-
 //ServerHTTPLogin read Login options
 func (obj *StorageST) ServerHTTPLogin() string {
 	obj.mutex.RLock()

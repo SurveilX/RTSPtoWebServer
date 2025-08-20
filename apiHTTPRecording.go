@@ -248,6 +248,39 @@ func HTTPAPIServerStopRecording(c *gin.Context) {
 	}
 }
 
+// HTTPAPIServerRemoveRecording completely stops recording and removes stream
+func HTTPAPIServerRemoveRecording(c *gin.Context) {
+	requestLogger := log.WithFields(logrus.Fields{
+		"module":  "http_recording",
+		"stream":  c.Param("uuid"),
+		"channel": c.Param("channel"),
+		"func":    "HTTPAPIServerRemoveRecording",
+	})
+
+	err := recordingManager.RemoveRecording(c.Param("uuid"), c.Param("channel"))
+	if err != nil {
+		c.IndentedJSON(400, VSSRecordingResponse{
+			Success: false,
+			Message: "Failed to remove recording",
+			Error:   err.Error(),
+		})
+		requestLogger.WithFields(logrus.Fields{
+			"call": "RemoveRecording",
+		}).Errorln(err.Error())
+		return
+	}
+
+	c.IndentedJSON(200, VSSRecordingResponse{
+		Success: true,
+		Message: "Recording completely stopped and stream/channel removed from configuration.",
+	})
+
+	requestLogger.WithFields(logrus.Fields{
+		"stream":  c.Param("uuid"),
+		"channel": c.Param("channel"),
+	}).Infoln("Recording removed via API")
+}
+
 // HTTPAPIServerRecordingStatus gets the status of a recording session
 func HTTPAPIServerRecordingStatus(c *gin.Context) {
 	requestLogger := log.WithFields(logrus.Fields{

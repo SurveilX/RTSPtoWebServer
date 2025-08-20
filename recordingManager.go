@@ -24,7 +24,7 @@ type RecordingSession struct {
 	StreamID     string    `json:"stream_id"`
 	ChannelID    string    `json:"channel_id"`
 	StartTime    time.Time `json:"start_time"`
-	Status       string    `json:"status"` // "recording", "stopping", "stopped", "uploading"
+	Status       string    `json:"status"` // "recording", "stopping", "stopped", "uploading", "failed"
 	FilePath     string    `json:"file_path"`
 	PosterPath   string    `json:"poster_path"`
 	UseFFmpeg    bool      `json:"use_ffmpeg"`
@@ -43,6 +43,11 @@ type RecordingSession struct {
 	ffmpegCmd   *exec.Cmd
 	clientID    string
 	mutex       sync.RWMutex
+	autoStopTimer *time.Timer
+
+	lastTimestamp time.Duration
+	baseTimestamp time.Duration
+	timestampSet  bool
 }
 
 // RecordingManager manages all recording sessions
@@ -200,8 +205,27 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 	}
 
 	sessionKey := fmt.Sprintf("%s_%s", streamID, channelID)
-	if session, exists := rm.sessions[sessionKey]; exists && session.Status == "recording" {
-		return nil, fmt.Errorf("recording already in progress for stream %s channel %s", streamID, channelID)
+	if session, exists := rm.sessions[sessionKey]; exists && (session.Status == "recording" || session.Status == "failed") {
+		if session.Status == "failed" {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"stream":     streamID,
+				"channel":    channelID,
+			}).Infoln("Cleaning up failed session before starting new recording")
+
+			if session.autoStopTimer != nil {
+				session.autoStopTimer.Stop()
+			}
+
+			if session.cancel != nil {
+				session.cancel()
+			}
+
+			delete(rm.sessions, sessionKey)
+		} else {
+			return nil, fmt.Errorf("recording already in progress for stream %s channel %s", streamID, channelID)
+		}
 	}
 
 	sessionID, err := generateUUID()
@@ -246,7 +270,12 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		StoreID:      storeID,
 		ctx:          ctx,
 		cancel:       cancel,
+		timestampSet: false,
 	}
+
+	session.autoStopTimer = time.AfterFunc(45*time.Second, func() {
+		rm.autoStopRecording(session)
+	})
 
 	if useFFmpeg {
 		err = rm.startFFmpegRecording(session)
@@ -255,6 +284,7 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 	}
 
 	if err != nil {
+		session.autoStopTimer.Stop()
 		cancel()
 		return nil, err
 	}
@@ -272,9 +302,38 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		"video_path":    videoPath,
 		"poster_path":   posterPath,
 		"temporary":     incidentType == "" || storeID == "",
+		"auto_stop":     "45s",
 	}).Infoln("Recording started")
 
 	return session, nil
+}
+
+// autoStopRecording automatically stops recording after timeout
+func (rm *RecordingManager) autoStopRecording(session *RecordingSession) {
+	session.mutex.Lock()
+	if session.Status != "recording" && session.Status != "failed" {
+		session.mutex.Unlock()
+		return
+	}
+	session.mutex.Unlock()
+
+	log.WithFields(logrus.Fields{
+		"module":     "recording",
+		"session_id": session.ID,
+		"stream":     session.StreamID,
+		"channel":    session.ChannelID,
+		"duration":   time.Since(session.StartTime).String(),
+		"status":     session.Status,
+	}).Warnln("Auto-stopping recording after 45 seconds timeout")
+
+	_, _, err := rm.StopRecordingNoIncidentWithNext(session.StreamID, session.ChannelID, true)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"error":      err.Error(),
+		}).Errorln("Failed to auto-stop recording")
+	}
 }
 
 // startFFmpegRecording starts recording using FFmpeg with VSS paths
@@ -284,7 +343,9 @@ func (rm *RecordingManager) startFFmpegRecording(session *RecordingSession) erro
 		"-an", // Disable audio
 		"-b:v", "900k", // Specify video bitrate
 		"-vcodec", "copy",
-		"-r", "60",
+		"-avoid_negative_ts", "make_zero", // Fix timestamp issues
+		"-fflags", "+genpts", // Generate presentation timestamps
+		"-r", "30", // Reduced frame rate for stability
 		"-y",
 		session.FilePath,
 	}
@@ -317,6 +378,29 @@ func (rm *RecordingManager) startFFmpegRecording(session *RecordingSession) erro
 	}()
 
 	return nil
+}
+
+// normalizePacketTimestamp fixes timestamp issues for MP4 muxer
+func (session *RecordingSession) normalizePacketTimestamp(packet *av.Packet) *av.Packet {
+	normalizedPacket := *packet
+	
+	if !session.timestampSet {
+		session.baseTimestamp = packet.Time
+		session.lastTimestamp = 0
+		session.timestampSet = true
+		normalizedPacket.Time = 0
+	} else {
+		relativeTime := packet.Time - session.baseTimestamp
+
+		if relativeTime <= session.lastTimestamp {
+			relativeTime = session.lastTimestamp + time.Millisecond*33
+		}
+		
+		session.lastTimestamp = relativeTime
+		normalizedPacket.Time = relativeTime
+	}
+	
+	return &normalizedPacket
 }
 
 // startNativeRecording starts recording using native Go MP4 muxer with VSS paths
@@ -382,27 +466,41 @@ func (rm *RecordingManager) startNativeRecording(session *RecordingSession) erro
 		var videoStart bool
 		noVideo := time.NewTimer(30 * time.Second)
 		defer noVideo.Stop()
+		
+		packetCount := 0
 
 		for {
 			select {
 			case <-session.ctx.Done():
 				session.mutex.Lock()
-				session.Status = "stopped"
+				if session.Status == "recording" {
+					session.Status = "stopped"
+				}
 				session.mutex.Unlock()
+				log.WithFields(logrus.Fields{
+					"module":       "recording",
+					"session_id":   session.ID,
+					"packet_count": packetCount,
+				}).Infoln("Recording stopped by context")
 				return
 			case <-noVideo.C:
 				session.mutex.Lock()
-				session.Status = "failed"
+				if session.Status == "recording" {
+					session.Status = "failed"
+					log.WithFields(logrus.Fields{
+						"module":       "recording",
+						"session_id":   session.ID,
+						"packet_count": packetCount,
+					}).Errorln("Recording failed: no video data received within 30 seconds")
+				}
 				session.mutex.Unlock()
-				log.WithFields(logrus.Fields{
-					"module":     "recording",
-					"session_id": session.ID,
-				}).Errorln("Recording failed: no video data")
 				return
 			case packet := <-ch:
 				if packet.Idx != 0 {
 					continue
 				}
+
+				packetCount++
 
 				if packet.IsKeyFrame {
 					noVideo.Reset(30 * time.Second)
@@ -412,16 +510,33 @@ func (rm *RecordingManager) startNativeRecording(session *RecordingSession) erro
 					continue
 				}
 
-				if err := session.muxer.WritePacket(*packet); err != nil {
+				normalizedPacket := session.normalizePacketTimestamp(packet)
+
+				if err := session.muxer.WritePacket(*normalizedPacket); err != nil {
 					session.mutex.Lock()
-					session.Status = "failed"
+					if session.Status == "recording" {
+						session.Status = "failed"
+						log.WithFields(logrus.Fields{
+							"module":       "recording",
+							"session_id":   session.ID,
+							"error":        err.Error(),
+							"packet_count": packetCount,
+							"packet_time":  normalizedPacket.Time.String(),
+							"last_time":    session.lastTimestamp.String(),
+						}).Errorln("Recording failed: write packet error with timestamp details")
+					}
 					session.mutex.Unlock()
-					log.WithFields(logrus.Fields{
-						"module":     "recording",
-						"session_id": session.ID,
-						"error":      err.Error(),
-					}).Errorln("Recording failed: write packet error")
 					return
+				}
+
+				if packetCount%100 == 0 {
+					log.WithFields(logrus.Fields{
+						"module":       "recording",
+						"session_id":   session.ID,
+						"packet_count": packetCount,
+						"duration":     time.Since(session.StartTime).String(),
+						"packet_time":  normalizedPacket.Time.String(),
+					}).Debugln("Recording progress")
 				}
 			}
 		}
@@ -442,9 +557,14 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 	}
 
 	session.mutex.Lock()
-	if session.Status != "recording" {
+	currentStatus := session.Status
+	if currentStatus != "recording" && currentStatus != "failed" {
 		session.mutex.Unlock()
-		return session, nil, fmt.Errorf("recording is not active (status: %s)", session.Status)
+		return session, nil, fmt.Errorf("recording is not active (status: %s)", currentStatus)
+	}
+
+	if session.autoStopTimer != nil {
+		session.autoStopTimer.Stop()
 	}
 
 	session.IncidentID = incidentID
@@ -464,37 +584,46 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 	}
 	session.mutex.Unlock()
 
-	if err := rm.organizeVSSFiles(session, incidentType, storeID); err != nil {
+	if _, err := os.Stat(session.FilePath); err == nil {
+		if err := rm.organizeVSSFiles(session, incidentType, storeID); err != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"error":      err.Error(),
+			}).Errorln("Failed to organize files into VSS structure")
+		}
+
+		oldSession := *session
+
+		log.WithFields(logrus.Fields{
+			"module":        "recording",
+			"session_id":    session.ID,
+			"stream":        streamID,
+			"channel":       channelID,
+			"incident_id":   incidentID,
+			"incident_type": incidentType,
+			"store_id":      storeID,
+			"duration":      time.Since(session.StartTime).String(),
+			"is_start_next": isStartNext,
+			"prev_status":   currentStatus,
+		}).Infoln("Recording stopped and organized into VSS structure")
+
+		go func() {
+			if err := rm.processVSSRecording(&oldSession); err != nil {
+				log.WithFields(logrus.Fields{
+					"module":     "recording",
+					"session_id": oldSession.ID,
+					"error":      err.Error(),
+				}).Errorln("Failed to process VSS recording")
+			}
+		}()
+	} else {
 		log.WithFields(logrus.Fields{
 			"module":     "recording",
 			"session_id": session.ID,
-			"error":      err.Error(),
-		}).Errorln("Failed to organize files into VSS structure")
+			"file_path":  session.FilePath,
+		}).Warnln("Video file not found, skipping VSS processing")
 	}
-
-	oldSession := *session
-
-	log.WithFields(logrus.Fields{
-		"module":        "recording",
-		"session_id":    session.ID,
-		"stream":        streamID,
-		"channel":       channelID,
-		"incident_id":   incidentID,
-		"incident_type": incidentType,
-		"store_id":      storeID,
-		"duration":      time.Since(session.StartTime).String(),
-		"is_start_next": isStartNext,
-	}).Infoln("Recording stopped and organized into VSS structure")
-
-	go func() {
-		if err := rm.processVSSRecording(&oldSession); err != nil {
-			log.WithFields(logrus.Fields{
-				"module":     "recording",
-				"session_id": oldSession.ID,
-				"error":      err.Error(),
-			}).Errorln("Failed to process VSS recording")
-		}
-	}()
 
 	var newSession *RecordingSession
 
@@ -517,6 +646,7 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 					"stream":        streamID,
 					"channel":       channelID,
 				}).Infoln("Started new recording after stop")
+				newSession = newSess
 			}
 		}()
 	}
@@ -536,9 +666,14 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 	}
 
 	session.mutex.Lock()
-	if session.Status != "recording" {
+	currentStatus := session.Status
+	if currentStatus != "recording" && currentStatus != "failed" {
 		session.mutex.Unlock()
-		return session, nil, fmt.Errorf("recording is not active (status: %s)", session.Status)
+		return session, nil, fmt.Errorf("recording is not active (status: %s)", currentStatus)
+	}
+
+	if session.autoStopTimer != nil {
+		session.autoStopTimer.Stop()
 	}
 
 	session.Status = "stopping"
@@ -563,6 +698,7 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 		"channel":       channelID,
 		"duration":      time.Since(session.StartTime).String(),
 		"is_start_next": isStartNext,
+		"prev_status":   currentStatus,
 	}).Infoln("Recording stopped without incident")
 
 	go func() {
@@ -596,6 +732,7 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 					"stream":        streamID,
 					"channel":       channelID,
 				}).Infoln("Started new recording after cleanup stop")
+				newSession = newSess
 			}
 		}()
 	}
@@ -731,7 +868,12 @@ func (rm *RecordingManager) RemoveRecording(streamID, channelID string) error {
 	if exists {
 		session.mutex.Lock()
 		session.Continuous = false
-		if session.Status == "recording" {
+
+		if session.autoStopTimer != nil {
+			session.autoStopTimer.Stop()
+		}
+
+		if session.Status == "recording" || session.Status == "failed" {
 			session.cancel()
 		}
 		session.mutex.Unlock()

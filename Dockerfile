@@ -19,7 +19,6 @@ FROM alpine:3.21
 WORKDIR /app
 
 COPY --from=builder /go/src/app/rtsp-to-web /app/
-COPY --from=builder /go/src/app/web /app/web
 
 RUN mkdir -p /config
 COPY --from=builder /go/src/app/config.json /config
