@@ -81,9 +81,6 @@ func HTTPAPIServer() {
 	privat.POST("/stream/:uuid/channel/:channel/recording/start", HTTPAPIServerStartRecording)
 	privat.POST("/stream/:uuid/channel/:channel/recording/stop", HTTPAPIServerStopRecording)
 	privat.GET("/stream/:uuid/channel/:channel/recording/status", HTTPAPIServerRecordingStatus)
-	privat.GET("/recordings", HTTPAPIServerListRecordings)
-	privat.GET("/recording/:session_id/download", HTTPAPIServerDownloadRecording)
-	privat.DELETE("/recording/:session_id", HTTPAPIServerDeleteRecording)
 
 	/*
 		Stream Testing

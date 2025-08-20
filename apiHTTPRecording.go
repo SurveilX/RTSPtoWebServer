@@ -2,35 +2,33 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
-// VSSRecordingStartRequest represents the request to start VSS recording
+// VSSRecordingStartRequest represents the request to start recording (no incident details yet)
 type VSSRecordingStartRequest struct {
-	RTSPURL      string `json:"rtsp_url" binding:"required"`
-	UseFFmpeg    bool   `json:"use_ffmpeg,omitempty"`
-	IncidentType string `json:"incident_type" binding:"required"`
-	StoreID      string `json:"store_id" binding:"required"`
+	RTSPURL   string `json:"rtsp_url"`
+	UseFFmpeg bool   `json:"use_ffmpeg,omitempty"`
 }
 
-// VSSRecordingStopRequest represents the request to stop VSS recording
+// VSSRecordingStopRequest represents the request to stop recording with incident details
 type VSSRecordingStopRequest struct {
-	IncidentID   string `json:"incident_id" binding:"required"`
-	StoreID      string `json:"store_id" binding:"required"`
-	IncidentType string `json:"incident_type" binding:"required"`
-	CallbackURL  string `json:"callback_url" binding:"required"`
+	IncidentID   string `json:"incident_id,omitempty"`
+	StoreID      string `json:"store_id,omitempty"`
+	IncidentType string `json:"incident_type,omitempty"`
+	CallbackURL  string `json:"callback_url,omitempty"`
+	IsStartNext  bool   `json:"is_start_next,omitempty"`
 }
 
-// VSSRecordingResponse represents the response for VSS recording operations
+// VSSRecordingResponse represents the response for recording operations
 type VSSRecordingResponse struct {
 	Success   bool                `json:"success"`
 	Message   string              `json:"message"`
 	Session   *RecordingSession   `json:"session,omitempty"`
+	NewSession *RecordingSession  `json:"new_session,omitempty"`
 	Sessions  map[string]*RecordingSession `json:"sessions,omitempty"`
 	Error     string              `json:"error,omitempty"`
 	Timing    *RecordingTiming    `json:"timing,omitempty"`
@@ -43,10 +41,10 @@ type RecordingTiming struct {
 	Description         string `json:"description"`
 }
 
-// HTTPAPIServerStartRecording starts VSS recording for a stream channel
+// HTTPAPIServerStartRecording starts recording for a stream channel (no incident details yet)
 func HTTPAPIServerStartRecording(c *gin.Context) {
 	requestLogger := log.WithFields(logrus.Fields{
-		"module":  "http_vss_recording",
+		"module":  "http_recording",
 		"stream":  c.Param("uuid"),
 		"channel": c.Param("channel"),
 		"func":    "HTTPAPIServerStartRecording",
@@ -56,7 +54,7 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.IndentedJSON(400, VSSRecordingResponse{
 			Success: false,
-			Message: "Invalid request. RTSP URL, incident_type, and store_id are required.",
+			Message: "Invalid request. RTSP URL is required.",
 			Error:   err.Error(),
 		})
 		requestLogger.WithFields(logrus.Fields{
@@ -74,27 +72,19 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 		return
 	}
 
-	if payload.IncidentType == "" || payload.StoreID == "" {
-		c.IndentedJSON(400, VSSRecordingResponse{
-			Success: false,
-			Message: "incident_type and store_id are required for VSS recording",
-			Error:   "Missing required VSS fields",
-		})
-		return
-	}
-
 	session, err := recordingManager.StartRecording(
 		c.Param("uuid"), 
 		c.Param("channel"), 
 		payload.RTSPURL, 
 		payload.UseFFmpeg,
-		payload.IncidentType,
-		payload.StoreID,
+		"",
+		"",
 	)
+
 	if err != nil {
 		c.IndentedJSON(400, VSSRecordingResponse{
 			Success: false,
-			Message: "Failed to start VSS recording",
+			Message: "Failed to start recording",
 			Error:   err.Error(),
 		})
 		requestLogger.WithFields(logrus.Fields{
@@ -117,26 +107,22 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 
 	c.IndentedJSON(200, VSSRecordingResponse{
 		Success: true,
-		Message: fmt.Sprintf("VSS recording started successfully. Files will be saved to /vss/alerts/%s/%s/ and /vss/posters/%s/%s/", 
-			convertIncidentType(payload.IncidentType), payload.StoreID,
-			convertIncidentType(payload.IncidentType), payload.StoreID),
+		Message: "Recording started successfully. Files will be organized into VSS structure when stopped with incident details.",
 		Session: session,
 		Timing:  timing,
 	})
 
 	requestLogger.WithFields(logrus.Fields{
-		"session_id":    session.ID,
-		"method":        timing.Method,
-		"incident_type": payload.IncidentType,
-		"store_id":      payload.StoreID,
-		"rtsp_url":      payload.RTSPURL,
-	}).Infoln("VSS Recording started via API")
+		"session_id": session.ID,
+		"method":     timing.Method,
+		"rtsp_url":   payload.RTSPURL,
+	}).Infoln("Recording started via API (no incident details yet)")
 }
 
-// HTTPAPIServerStopRecording stops current VSS recording and starts new one with callback
+// HTTPAPIServerStopRecording stops current recording and organizes with incident details
 func HTTPAPIServerStopRecording(c *gin.Context) {
 	requestLogger := log.WithFields(logrus.Fields{
-		"module":  "http_vss_recording",
+		"module":  "http_recording",
 		"stream":  c.Param("uuid"),
 		"channel": c.Param("channel"),
 		"func":    "HTTPAPIServerStopRecording",
@@ -155,87 +141,117 @@ func HTTPAPIServerStopRecording(c *gin.Context) {
 		return
 	}
 
-	// Validate required fields
-	if payload.IncidentID == "" || payload.CallbackURL == "" || payload.StoreID == "" || payload.IncidentType == "" {
-		c.IndentedJSON(400, VSSRecordingResponse{
-			Success: false,
-			Message: "incident_id, store_id, incident_type, and callback_url are required",
-			Error:   "Missing required fields",
-		})
-		return
-	}
+	hasIncidentDetails := payload.IncidentID != "" && payload.StoreID != "" && 
+		payload.IncidentType != "" && payload.CallbackURL != ""
 
-	session, err := recordingManager.StopRecording(
-		c.Param("uuid"), 
-		c.Param("channel"), 
-		payload.IncidentID, 
-		payload.CallbackURL,
-	)
-	if err != nil {
-		c.IndentedJSON(400, VSSRecordingResponse{
-			Success: false,
-			Message: "Failed to stop VSS recording",
-			Error:   err.Error(),
-		})
+	if hasIncidentDetails {
+		session, newSession, err := recordingManager.StopRecordingWithNext(
+			c.Param("uuid"), 
+			c.Param("channel"), 
+			payload.IncidentID,
+			payload.StoreID,
+			payload.IncidentType,
+			payload.CallbackURL,
+			payload.IsStartNext,
+		)
+		if err != nil {
+			c.IndentedJSON(400, VSSRecordingResponse{
+				Success: false,
+				Message: "Failed to stop recording with incident details",
+				Error:   err.Error(),
+			})
+			requestLogger.WithFields(logrus.Fields{
+				"call": "StopRecordingWithNext",
+			}).Errorln(err.Error())
+			return
+		}
+
+		message := fmt.Sprintf("Recording stopped and organized into VSS structure (/vss/alerts/%s/%s/). Video and poster uploaded to Digital Ocean Spaces and callback sent to %s with incidentId: %s", 
+			convertIncidentType(payload.IncidentType), payload.StoreID, payload.CallbackURL, payload.IncidentID)
+		
+		if payload.IsStartNext && newSession != nil {
+			message += fmt.Sprintf(". New recording started automatically (session: %s)", newSession.ID)
+		}
+
+		response := VSSRecordingResponse{
+			Success: true,
+			Message: message,
+			Session: session,
+		}
+
+		if newSession != nil {
+			response.NewSession = newSession
+		}
+
+		c.IndentedJSON(200, response)
+
 		requestLogger.WithFields(logrus.Fields{
-			"call": "StopRecording",
-		}).Errorln(err.Error())
-		return
+			"session_id":    session.ID,
+			"incident_id":   payload.IncidentID,
+			"callback_url":  payload.CallbackURL,
+			"store_id":      payload.StoreID,
+			"incident_type": payload.IncidentType,
+			"is_start_next": payload.IsStartNext,
+			"new_session_id": func() string {
+				if newSession != nil {
+					return newSession.ID
+				}
+				return ""
+			}(),
+		}).Infoln("Recording stopped with incident details - VSS organization and upload scheduled")
+	} else {
+		session, newSession, err := recordingManager.StopRecordingNoIncidentWithNext(
+			c.Param("uuid"), 
+			c.Param("channel"),
+			payload.IsStartNext,
+		)
+
+		if err != nil {
+			c.IndentedJSON(400, VSSRecordingResponse{
+				Success: false,
+				Message: "Failed to stop recording",
+				Error:   err.Error(),
+			})
+			requestLogger.WithFields(logrus.Fields{
+				"call": "StopRecordingNoIncidentWithNext",
+			}).Errorln(err.Error())
+			return
+		}
+
+		message := "Recording stopped and temporary files cleaned up. No incident generated."
+		if payload.IsStartNext && newSession != nil {
+			message += fmt.Sprintf(" New recording started automatically (session: %s)", newSession.ID)
+		}
+
+		response := VSSRecordingResponse{
+			Success: true,
+			Message: message,
+			Session: session,
+		}
+
+		if newSession != nil {
+			response.NewSession = newSession
+		}
+
+		c.IndentedJSON(200, response)
+
+		requestLogger.WithFields(logrus.Fields{
+			"session_id": session.ID,
+			"is_start_next": payload.IsStartNext,
+			"new_session_id": func() string {
+				if newSession != nil {
+					return newSession.ID
+				}
+				return ""
+			}(),
+		}).Infoln("Recording stopped without incident - temporary files cleaned up")
 	}
-
-	c.IndentedJSON(200, VSSRecordingResponse{
-		Success: true,
-		Message: fmt.Sprintf("VSS recording stopped and new recording started. Video and poster will be uploaded to Digital Ocean Spaces and callback will be sent to %s with incidentId: %s", 
-			payload.CallbackURL, payload.IncidentID),
-		Session: session,
-	})
-
-	requestLogger.WithFields(logrus.Fields{
-		"session_id":    session.ID,
-		"incident_id":   payload.IncidentID,
-		"callback_url":  payload.CallbackURL,
-		"store_id":      payload.StoreID,
-		"incident_type": payload.IncidentType,
-	}).Infoln("VSS Recording stopped and callback scheduled via API")
 }
 
-// HTTPAPIServerRemoveRecording completely stops VSS recording and removes stream
-func HTTPAPIServerRemoveRecording(c *gin.Context) {
-	requestLogger := log.WithFields(logrus.Fields{
-		"module":  "http_vss_recording",
-		"stream":  c.Param("uuid"),
-		"channel": c.Param("channel"),
-		"func":    "HTTPAPIServerRemoveRecording",
-	})
-
-	err := recordingManager.RemoveRecording(c.Param("uuid"), c.Param("channel"))
-	if err != nil {
-		c.IndentedJSON(400, VSSRecordingResponse{
-			Success: false,
-			Message: "Failed to remove VSS recording",
-			Error:   err.Error(),
-		})
-		requestLogger.WithFields(logrus.Fields{
-			"call": "RemoveRecording",
-		}).Errorln(err.Error())
-		return
-	}
-
-	c.IndentedJSON(200, VSSRecordingResponse{
-		Success: true,
-		Message: "VSS recording completely stopped and stream/channel removed from configuration.",
-	})
-
-	requestLogger.WithFields(logrus.Fields{
-		"stream":  c.Param("uuid"),
-		"channel": c.Param("channel"),
-	}).Infoln("VSS Recording removed via API")
-}
-
-// HTTPAPIServerRecordingStatus gets the status of a VSS recording session
+// HTTPAPIServerRecordingStatus gets the status of a recording session
 func HTTPAPIServerRecordingStatus(c *gin.Context) {
 	requestLogger := log.WithFields(logrus.Fields{
-		"module":  "http_vss_recording",
+		"module":  "http_recording",
 		"stream":  c.Param("uuid"),
 		"channel": c.Param("channel"),
 		"func":    "HTTPAPIServerRecordingStatus",
@@ -245,7 +261,7 @@ func HTTPAPIServerRecordingStatus(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(404, VSSRecordingResponse{
 			Success: false,
-			Message: "VSS recording session not found",
+			Message: "Recording session not found",
 			Error:   err.Error(),
 		})
 		requestLogger.WithFields(logrus.Fields{
@@ -256,110 +272,7 @@ func HTTPAPIServerRecordingStatus(c *gin.Context) {
 
 	c.IndentedJSON(200, VSSRecordingResponse{
 		Success: true,
-		Message: "VSS recording status retrieved",
+		Message: "Recording status retrieved",
 		Session: session,
 	})
-}
-
-// HTTPAPIServerListRecordings lists all VSS recording sessions
-func HTTPAPIServerListRecordings(c *gin.Context) {
-	sessions := recordingManager.ListRecordingSessions()
-
-	c.IndentedJSON(200, VSSRecordingResponse{
-		Success:  true,
-		Message:  "VSS recording sessions retrieved",
-		Sessions: sessions,
-	})
-}
-
-// HTTPAPIServerDownloadRecording allows downloading a VSS recording file
-func HTTPAPIServerDownloadRecording(c *gin.Context) {
-	sessionID := c.Param("session_id")
-
-	var targetSession *RecordingSession
-	sessions := recordingManager.ListRecordingSessions()
-	
-	for _, session := range sessions {
-		if session.ID == sessionID {
-			targetSession = session
-			break
-		}
-	}
-	
-	if targetSession == nil {
-		c.IndentedJSON(404, VSSRecordingResponse{
-			Success: false,
-			Message: "VSS recording session not found",
-			Error:   "Invalid session ID",
-		})
-		return
-	}
-
-	if _, err := os.Stat(targetSession.FilePath); os.IsNotExist(err) {
-		c.IndentedJSON(404, VSSRecordingResponse{
-			Success: false,
-			Message: "VSS recording file not found on local storage. It may have been uploaded to Digital Ocean Spaces.",
-			Error:   "File does not exist on disk",
-		})
-		return
-	}
-
-	fileName := filepath.Base(targetSession.FilePath)
-	c.Header("Content-Description", "File Transfer")
-	c.Header("Content-Transfer-Encoding", "binary")
-	c.Header("Content-Disposition", "attachment; filename="+fileName)
-	c.Header("Content-Type", "video/mp4")
-
-	c.File(targetSession.FilePath)
-}
-
-// HTTPAPIServerDeleteRecording deletes a VSS recording file and session
-func HTTPAPIServerDeleteRecording(c *gin.Context) {
-	sessionID := c.Param("session_id")
-
-	var targetSession *RecordingSession
-	sessions := recordingManager.ListRecordingSessions()
-	
-	for _, session := range sessions {
-		if session.ID == sessionID {
-			targetSession = session
-			break
-		}
-	}
-	
-	if targetSession == nil {
-		c.IndentedJSON(404, VSSRecordingResponse{
-			Success: false,
-			Message: "VSS recording session not found",
-			Error:   "Invalid session ID",
-		})
-		return
-	}
-
-	if targetSession.Status == "recording" {
-		recordingManager.StopRecording(targetSession.StreamID, targetSession.ChannelID, "", "")
-	}
-
-	if err := os.Remove(targetSession.FilePath); err != nil && !os.IsNotExist(err) {
-		c.IndentedJSON(500, VSSRecordingResponse{
-			Success: false,
-			Message: "Failed to delete local VSS recording file",
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	os.Remove(targetSession.PosterPath)
-
-	recordingManager.CleanupSession(targetSession.StreamID, targetSession.ChannelID)
-
-	c.IndentedJSON(200, VSSRecordingResponse{
-		Success: true,
-		Message: "Local VSS recording files deleted successfully. Note: Files may still exist in Digital Ocean Spaces.",
-	})
-
-	log.WithFields(logrus.Fields{
-		"module":     "recording",
-		"session_id": sessionID,
-	}).Infoln("VSS Recording deleted")
 }

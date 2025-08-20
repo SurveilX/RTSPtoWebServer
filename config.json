@@ -29,1143 +29,134 @@
     "webrtc_port_min": 0
   },
   "streams": {
-    "68307ec6107b291a011a22c8": {
-      "name": "Stream for 68307ec6107b291a011a22c8"
-    },
-    "685969ecbe395c6ec06a9c16": {
-      "name": "Stream for 685969ecbe395c6ec06a9c16"
-    },
-    "6863e43281c4931ada5b0994": {
-      "name": "Stream for 6863e43281c4931ada5b0994"
-    },
-    "68653c99027bc197ef5d9618": {
-      "name": "Stream for 68653c99027bc197ef5d9618"
-    },
-    "68653ce3027bc197ef5d961a": {
+    "6838061a3833b2b88f6b731e": {
       "channels": {
-        "68653caa027bc197ef5d9619": {
-          "name": "Camera 68653caa027bc197ef5d9619",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
+        "689efc1e2c903b66776c0ffb": {
+          "name": "Recording Channel 689efc1e2c903b66776c0ffb",
+          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
         }
       },
-      "name": "Stream for 68653ce3027bc197ef5d961a"
-    },
-    "686d0dc2e26ee6d4842a183f": {
-      "name": "Stream for 686d0dc2e26ee6d4842a183f"
-    },
-    "686d1faf027bc197ef5d9623": {
-      "channels": {
-        "686d294b027bc197ef5d9626": {
-          "name": "Camera 686d294b027bc197ef5d9626",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "68701f29e1091d3e07e413b1": {
-          "name": "Camera 68701f29e1091d3e07e413b1",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "687020f5e1091d3e07e413b2": {
-          "name": "Camera 687020f5e1091d3e07e413b2",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "687020fce1091d3e07e413b3": {
-          "name": "Camera 687020fce1091d3e07e413b3",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        }
-      },
-      "name": "Stream for 686d1faf027bc197ef5d9623"
-    },
-    "686fecace1091d3e07e413b0": {
-      "name": "Stream for 686fecace1091d3e07e413b0"
-    },
-    "6876526263205da6c00d0599": {
-      "channels": {
-        "6876528a63205da6c00d059e": {
-          "name": "Camera 6876528a63205da6c00d059e",
-          "on_demand": true,
-          "url": "rtsp://admin:abcd1234@173.165.175.194:554/cam/realmonitor?channel=1\u0026subtype=1"
-        },
-        "687661136558f6bead262a2a": {
-          "name": "Camera 687661136558f6bead262a2a",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=4\u0026streamType=main"
-        }
-      },
-      "name": "Stream for 6876526263205da6c00d0599"
-    },
-    "687896836c7702a85377e6f2": {
-      "name": "Stream for 687896836c7702a85377e6f2"
-    },
-    "6878e2acaae64e62a9b7c9f8": {
-      "name": "Stream for 6878e2acaae64e62a9b7c9f8"
-    },
-    "6878e9abaae64e62a9b7ca07": {
-      "name": "Stream for 6878e9abaae64e62a9b7ca07"
+      "name": "Recording Stream 6838061a3833b2b88f6b731e"
     },
     "6883e4c4261edbcb2e99dec6": {
       "name": "Stream for 6883e4c4261edbcb2e99dec6"
     },
-    "6883f772261edbcb2e99ded0": {
-      "name": "Stream for 6883f772261edbcb2e99ded0"
-    },
     "68872f95261edbcb2e99ded8": {
-      "channels": {
-        "689df36503a3199c8622faf4": {
-          "name": "Camera 689df36503a3199c8622faf4",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=1\u0026streamType=main"
-        },
-        "689e22c5ec55a4820ab61309": {
-          "name": "Camera 689e22c5ec55a4820ab61309",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=2\u0026streamType=main"
-        },
-        "689e22cdec55a4820ab6130a": {
-          "name": "Camera 689e22cdec55a4820ab6130a",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=3\u0026streamType=main"
-        },
-        "689e22daec55a4820ab6130b": {
-          "name": "Camera 689e22daec55a4820ab6130b",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=4\u0026streamType=main"
-        },
-        "689e22e3ec55a4820ab6130c": {
-          "name": "Camera 689e22e3ec55a4820ab6130c",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=5\u0026streamType=main"
-        },
-        "689e22ecec55a4820ab6130d": {
-          "name": "Camera 689e22ecec55a4820ab6130d",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=6\u0026streamType=main"
-        },
-        "689e22f4ec55a4820ab6130e": {
-          "name": "Camera 689e22f4ec55a4820ab6130e",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=7\u0026streamType=main"
-        },
-        "689e22fdec55a4820ab6130f": {
-          "name": "Camera 689e22fdec55a4820ab6130f",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=8\u0026streamType=main"
-        },
-        "689e2305ec55a4820ab61310": {
-          "name": "Camera 689e2305ec55a4820ab61310",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=9\u0026streamType=main"
-        },
-        "689e230fec55a4820ab61311": {
-          "name": "Camera 689e230fec55a4820ab61311",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=10\u0026streamType=main"
-        },
-        "689e231cec55a4820ab61312": {
-          "name": "Camera 689e231cec55a4820ab61312",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=11\u0026streamType=main"
-        },
-        "689e232cec55a4820ab61313": {
-          "name": "Camera 689e232cec55a4820ab61313",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=12\u0026streamType=main"
-        },
-        "689e2335ec55a4820ab61314": {
-          "name": "Camera 689e2335ec55a4820ab61314",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=13\u0026streamType=main"
-        },
-        "689e233eec55a4820ab61315": {
-          "name": "Camera 689e233eec55a4820ab61315",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=14\u0026streamType=main"
-        },
-        "689e2347ec55a4820ab61316": {
-          "name": "Camera 689e2347ec55a4820ab61316",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "689e234eec55a4820ab61317": {
-          "name": "Camera 689e234eec55a4820ab61317",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=16\u0026streamType=main"
-        },
-        "689e265fec55a4820ab6131a": {
-          "name": "Camera 689e265fec55a4820ab6131a",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=1\u0026streamType=main"
-        },
-        "689e267aec55a4820ab6131b": {
-          "name": "Camera 689e267aec55a4820ab6131b",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=2\u0026streamType=main"
-        },
-        "689e268bec55a4820ab6131c": {
-          "name": "Camera 689e268bec55a4820ab6131c",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=3\u0026streamType=main"
-        },
-        "689e26a0ec55a4820ab6131d": {
-          "name": "Camera 689e26a0ec55a4820ab6131d",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=4\u0026streamType=main"
-        },
-        "689e26adec55a4820ab6131e": {
-          "name": "Camera 689e26adec55a4820ab6131e",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=5\u0026streamType=main"
-        },
-        "689e26b7ec55a4820ab6131f": {
-          "name": "Camera 689e26b7ec55a4820ab6131f",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=6\u0026streamType=main"
-        },
-        "689e26c9ec55a4820ab61320": {
-          "name": "Camera 689e26c9ec55a4820ab61320",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=7\u0026streamType=main"
-        },
-        "689e26e1ec55a4820ab61321": {
-          "name": "Camera 689e26e1ec55a4820ab61321",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=8\u0026streamType=main"
-        },
-        "689e26f3ec55a4820ab61322": {
-          "name": "Camera 689e26f3ec55a4820ab61322",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=9\u0026streamType=main"
-        },
-        "689e2703ec55a4820ab61323": {
-          "name": "Camera 689e2703ec55a4820ab61323",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=10\u0026streamType=main"
-        },
-        "689e2719ec55a4820ab61324": {
-          "name": "Camera 689e2719ec55a4820ab61324",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=11\u0026streamType=main"
-        },
-        "689e2730ec55a4820ab61325": {
-          "name": "Camera 689e2730ec55a4820ab61325",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=12\u0026streamType=main"
-        },
-        "689e273dec55a4820ab61326": {
-          "name": "Camera 689e273dec55a4820ab61326",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=13\u0026streamType=main"
-        },
-        "689e2757ec55a4820ab61327": {
-          "name": "Camera 689e2757ec55a4820ab61327",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=14\u0026streamType=main"
-        },
-        "689e276aec55a4820ab61328": {
-          "name": "Camera 689e276aec55a4820ab61328",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=15\u0026streamType=main"
-        },
-        "689e27a3ec55a4820ab61329": {
-          "name": "Camera 689e27a3ec55a4820ab61329",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=16\u0026streamType=main"
-        }
-      },
       "name": "Stream for 68872f95261edbcb2e99ded8"
     },
-    "68874407261edbcb2e99e453": {
-      "name": "Stream for 68874407261edbcb2e99e453"
+    "68a31de069304b20a85a161c": {
+      "name": "Stream for 68a31de069304b20a85a161c"
     },
-    "6887841d1abc1c458a1f1904": {
+    "68a31eeb69304b20a85a162e": {
+      "name": "Stream for 68a31eeb69304b20a85a162e"
+    },
+    "68a3206369304b20a85a1655": {
       "channels": {
-        "688a29d30b9d70702c143f87": {
-          "name": "Camera 688a29d30b9d70702c143f87",
+        "68a3207269304b20a85a165b": {
+          "name": "Camera 68a3207269304b20a85a165b",
           "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=1\u0026streamType=main"
+        },
+        "68a3208169304b20a85a165d": {
+          "name": "Camera 68a3208169304b20a85a165d",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=2\u0026streamType=main"
+        },
+        "68a3209069304b20a85a165e": {
+          "name": "Camera 68a3209069304b20a85a165e",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=3\u0026streamType=main"
+        },
+        "68a3209d69304b20a85a165f": {
+          "name": "Camera 68a3209d69304b20a85a165f",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=4\u0026streamType=main"
+        },
+        "68a320a769304b20a85a1660": {
+          "name": "Camera 68a320a769304b20a85a1660",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=5\u0026streamType=main"
+        },
+        "68a320b169304b20a85a1661": {
+          "name": "Camera 68a320b169304b20a85a1661",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=6\u0026streamType=main"
+        },
+        "68a320bd69304b20a85a1662": {
+          "name": "Camera 68a320bd69304b20a85a1662",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
+        },
+        "68a320c869304b20a85a1663": {
+          "name": "Camera 68a320c869304b20a85a1663",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=8\u0026streamType=main"
+        },
+        "68a320da69304b20a85a1664": {
+          "name": "Camera 68a320da69304b20a85a1664",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=9\u0026streamType=main"
+        },
+        "68a320eb69304b20a85a1665": {
+          "name": "Camera 68a320eb69304b20a85a1665",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=10\u0026streamType=main"
+        },
+        "68a3218369304b20a85a1666": {
+          "name": "Camera 68a3218369304b20a85a1666",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=11\u0026streamType=main"
+        },
+        "68a3219269304b20a85a1667": {
+          "name": "Camera 68a3219269304b20a85a1667",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=12\u0026streamType=main"
+        },
+        "68a3219f69304b20a85a1668": {
+          "name": "Camera 68a3219f69304b20a85a1668",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=13\u0026streamType=main"
+        },
+        "68a321af69304b20a85a1669": {
+          "name": "Camera 68a321af69304b20a85a1669",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=14\u0026streamType=main"
+        },
+        "68a321c369304b20a85a166a": {
+          "name": "Camera 68a321c369304b20a85a166a",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=15\u0026streamType=main"
+        },
+        "68a321cf69304b20a85a166b": {
+          "name": "Camera 68a321cf69304b20a85a166b",
+          "on_demand": true,
+          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=16\u0026streamType=main"
         }
       },
-      "name": "Stream for 6887841d1abc1c458a1f1904"
+      "name": "Stream for 68a3206369304b20a85a1655"
+    },
+    "68a469d12af5e0d9315a308f": {
+      "name": "Stream for 68a469d12af5e0d9315a308f"
     },
     "ad-hoc-stream": {
       "channels": {
-        "02xzzf7c": {
-          "name": "Camera 02xzzf7c",
+        "c53ymozz": {
+          "name": "Camera c53ymozz",
           "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
+          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=6\u0026streamType=main"
         },
-        "07z4jhtn": {
-          "name": "Camera 07z4jhtn",
+        "k6u1tszt": {
+          "name": "Camera k6u1tszt",
           "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
+          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=6\u0026streamType=main"
         },
-        "09w6752c": {
-          "name": "Camera 09w6752c",
+        "rha01qr5": {
+          "name": "Camera rha01qr5",
           "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "0ccuimyd": {
-          "name": "Camera 0ccuimyd",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "0slddmbk": {
-          "name": "Camera 0slddmbk",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "0x49zmra": {
-          "name": "Camera 0x49zmra",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "14bmr663": {
-          "name": "Camera 14bmr663",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "14vo1ver": {
-          "name": "Camera 14vo1ver",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "18ea63hj": {
-          "name": "Camera 18ea63hj",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "1ceeyrb6": {
-          "name": "Camera 1ceeyrb6",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "1uf8crz1": {
-          "name": "Camera 1uf8crz1",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "1vilcp3v": {
-          "name": "Camera 1vilcp3v",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "1y0v47yr": {
-          "name": "Camera 1y0v47yr",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "1zrkdjun": {
-          "name": "Camera 1zrkdjun",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "23t9a1lr": {
-          "name": "Camera 23t9a1lr",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "25ao9bdx": {
-          "name": "Camera 25ao9bdx",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "275axfdk": {
-          "name": "Camera 275axfdk",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "2k3inpb6": {
-          "name": "Camera 2k3inpb6",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "2uxk6f1o": {
-          "name": "Camera 2uxk6f1o",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "2vkxo5ho": {
-          "name": "Camera 2vkxo5ho",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "33l17pwr": {
-          "name": "Camera 33l17pwr",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "33o5deap": {
-          "name": "Camera 33o5deap",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "3gdmm72z": {
-          "name": "Camera 3gdmm72z",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "3pbowf3e": {
-          "name": "Camera 3pbowf3e",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "43dg1j1x": {
-          "name": "Camera 43dg1j1x",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "4cw1ncpi": {
-          "name": "Camera 4cw1ncpi",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "4uzz0fuw": {
-          "name": "Camera 4uzz0fuw",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "4ycva9t4": {
-          "name": "Camera 4ycva9t4",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "53jd1q0r": {
-          "name": "Camera 53jd1q0r",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "5mdaj3cp": {
-          "name": "Camera 5mdaj3cp",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "5xon30t6": {
-          "name": "Camera 5xon30t6",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "61me3dfh": {
-          "name": "Camera 61me3dfh",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "69wua5ra": {
-          "name": "Camera 69wua5ra",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "6ae13pt7": {
-          "name": "Camera 6ae13pt7",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "6b2415n2": {
-          "name": "Camera 6b2415n2",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "6oxccshq": {
-          "name": "Camera 6oxccshq",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "6tlehtpj": {
-          "name": "Camera 6tlehtpj",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "71pc0tvq": {
-          "name": "Camera 71pc0tvq",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "7prvw0sw": {
-          "name": "Camera 7prvw0sw",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "7siteiwg": {
-          "name": "Camera 7siteiwg",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "7tmbwp3d": {
-          "name": "Camera 7tmbwp3d",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "8ei0n4u9": {
-          "name": "Camera 8ei0n4u9",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "8gye7wdl": {
-          "name": "Camera 8gye7wdl",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "8jb2yakm": {
-          "name": "Camera 8jb2yakm",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "8zh3rmm0": {
-          "name": "Camera 8zh3rmm0",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "98xtsomm": {
-          "name": "Camera 98xtsomm",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "9j5bm39b": {
-          "name": "Camera 9j5bm39b",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "9uiricgo": {
-          "name": "Camera 9uiricgo",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "9vqd80la": {
-          "name": "Camera 9vqd80la",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "aonlgy0d": {
-          "name": "Camera aonlgy0d",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "b8o8vdoj": {
-          "name": "Camera b8o8vdoj",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "bfaydg35": {
-          "name": "Camera bfaydg35",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "bswtcyec": {
-          "name": "Camera bswtcyec",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "cp4n3n4t": {
-          "name": "Camera cp4n3n4t",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "dafpxugv": {
-          "name": "Camera dafpxugv",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "dah4aj66": {
-          "name": "Camera dah4aj66",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "dd759x6q": {
-          "name": "Camera dd759x6q",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "ddeufth8": {
-          "name": "Camera ddeufth8",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "dgx8vx73": {
-          "name": "Camera dgx8vx73",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "dni51fdy": {
-          "name": "Camera dni51fdy",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "dpxjqcao": {
-          "name": "Camera dpxjqcao",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "dwkoh34v": {
-          "name": "Camera dwkoh34v",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "e7tf86cf": {
-          "name": "Camera e7tf86cf",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "eopf6asw": {
-          "name": "Camera eopf6asw",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "f0x6ws7r": {
-          "name": "Camera f0x6ws7r",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "f35p18op": {
-          "name": "Camera f35p18op",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "f59g568y": {
-          "name": "Camera f59g568y",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "f9bzig1p": {
-          "name": "Camera f9bzig1p",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "fjjurw6o": {
-          "name": "Camera fjjurw6o",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "fw630gtl": {
-          "name": "Camera fw630gtl",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "gcz7bqku": {
-          "name": "Camera gcz7bqku",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "gp23fwml": {
-          "name": "Camera gp23fwml",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "hizzr54o": {
-          "name": "Camera hizzr54o",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "ho034s1d": {
-          "name": "Camera ho034s1d",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "hrbc5tjl": {
-          "name": "Camera hrbc5tjl",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "ht3ppcv2": {
-          "name": "Camera ht3ppcv2",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "i1q0p3e4": {
-          "name": "Camera i1q0p3e4",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "icq95l3o": {
-          "name": "Camera icq95l3o",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "idvg6g4e": {
-          "name": "Camera idvg6g4e",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "ifu53df9": {
-          "name": "Camera ifu53df9",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "iq7xww7n": {
-          "name": "Camera iq7xww7n",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "iwdbb34g": {
-          "name": "Camera iwdbb34g",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "izq2g142": {
-          "name": "Camera izq2g142",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "jsa0a8u2": {
-          "name": "Camera jsa0a8u2",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "jyv34ru1": {
-          "name": "Camera jyv34ru1",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "k69tcg2b": {
-          "name": "Camera k69tcg2b",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "kns0sb9z": {
-          "name": "Camera kns0sb9z",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "ko30jpg2": {
-          "name": "Camera ko30jpg2",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "kr9m8bto": {
-          "name": "Camera kr9m8bto",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "kw0ng5vx": {
-          "name": "Camera kw0ng5vx",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "lfx1n7ea": {
-          "name": "Camera lfx1n7ea",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "lhy1tn76": {
-          "name": "Camera lhy1tn76",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "lkt9dkh8": {
-          "name": "Camera lkt9dkh8",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "m68wcc36": {
-          "name": "Camera m68wcc36",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "mwikzwhb": {
-          "name": "Camera mwikzwhb",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "mwm958sa": {
-          "name": "Camera mwm958sa",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "my0a8wia": {
-          "name": "Camera my0a8wia",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "n3j6ivkd": {
-          "name": "Camera n3j6ivkd",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "ndcwafu7": {
-          "name": "Camera ndcwafu7",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "negnw6ox": {
-          "name": "Camera negnw6ox",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "ngvwmeag": {
-          "name": "Camera ngvwmeag",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "nly496mi": {
-          "name": "Camera nly496mi",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "nnoajkqj": {
-          "name": "Camera nnoajkqj",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "o2fpjp9j": {
-          "name": "Camera o2fpjp9j",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "o7tpp1re": {
-          "name": "Camera o7tpp1re",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "oh96k8c0": {
-          "name": "Camera oh96k8c0",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "omjk7jv1": {
-          "name": "Camera omjk7jv1",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "onlkqhty": {
-          "name": "Camera onlkqhty",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "p7i72lr9": {
-          "name": "Camera p7i72lr9",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "pclimgo3": {
-          "name": "Camera pclimgo3",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "pe6m2awp": {
-          "name": "Camera pe6m2awp",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "pmcxjsci": {
-          "name": "Camera pmcxjsci",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "poafjji5": {
-          "name": "Camera poafjji5",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "pp40mfcg": {
-          "name": "Camera pp40mfcg",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "q7fexyzy": {
-          "name": "Camera q7fexyzy",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "qryco5ex": {
-          "name": "Camera qryco5ex",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "qw3ysrit": {
-          "name": "Camera qw3ysrit",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "r0cbjb8p": {
-          "name": "Camera r0cbjb8p",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "r4hr7ikj": {
-          "name": "Camera r4hr7ikj",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "rbths39o": {
-          "name": "Camera rbths39o",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "rqevvfye": {
-          "name": "Camera rqevvfye",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main": {
-          "name": "Camera rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main": {
-          "name": "Camera rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "rv3mo03j": {
-          "name": "Camera rv3mo03j",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "sdkkpot1": {
-          "name": "Camera sdkkpot1",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "sdx26cuh": {
-          "name": "Camera sdx26cuh",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "sf0fdhpc": {
-          "name": "Camera sf0fdhpc",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "sn3efei4": {
-          "name": "Camera sn3efei4",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "stwezo2i": {
-          "name": "Camera stwezo2i",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "sys51ek0": {
-          "name": "Camera sys51ek0",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "t4cjg9ev": {
-          "name": "Camera t4cjg9ev",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "t4du1y6h": {
-          "name": "Camera t4du1y6h",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "t69ve2yr": {
-          "name": "Camera t69ve2yr",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "tdrlyqo9": {
-          "name": "Camera tdrlyqo9",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "th88aljv": {
-          "name": "Camera th88aljv",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "tvb5uiib": {
-          "name": "Camera tvb5uiib",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "u6ud28ro": {
-          "name": "Camera u6ud28ro",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "uejftks8": {
-          "name": "Camera uejftks8",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "ur5th4xk": {
-          "name": "Camera ur5th4xk",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "uz58dit0": {
-          "name": "Camera uz58dit0",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "v6l7mehl": {
-          "name": "Camera v6l7mehl",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "vesw878a": {
-          "name": "Camera vesw878a",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "vjysn81u": {
-          "name": "Camera vjysn81u",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "vmmcqxdg": {
-          "name": "Camera vmmcqxdg",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "vszz47dh": {
-          "name": "Camera vszz47dh",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "vvqjgdc1": {
-          "name": "Camera vvqjgdc1",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "vzf1w050": {
-          "name": "Camera vzf1w050",
-          "on_demand": true,
-          "url": "rtsp://paralect:paralect123@93.125.14.145:5540/stream2"
-        },
-        "w19sphog": {
-          "name": "Camera w19sphog",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "w1r9hgoc": {
-          "name": "Camera w1r9hgoc",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "wihy4ts8": {
-          "name": "Camera wihy4ts8",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "wksthwmz": {
-          "name": "Camera wksthwmz",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "wn09uczr": {
-          "name": "Camera wn09uczr",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "x5e5k1wr": {
-          "name": "Camera x5e5k1wr",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "x95ajgee": {
-          "name": "Camera x95ajgee",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "yaevchhl": {
-          "name": "Camera yaevchhl",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "yafukhoe": {
-          "name": "Camera yafukhoe",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "yb1wpp9s": {
-          "name": "Camera yb1wpp9s",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "ylxxfj30": {
-          "name": "Camera ylxxfj30",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "yss854or": {
-          "name": "Camera yss854or",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "z083hzv3": {
-          "name": "Camera z083hzv3",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "z2szxka7": {
-          "name": "Camera z2szxka7",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "z32gs9e3": {
-          "name": "Camera z32gs9e3",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=7\u0026streamType=main"
-        },
-        "zn0ayg9o": {
-          "name": "Camera zn0ayg9o",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        },
-        "zpkq6k8b": {
-          "name": "Camera zpkq6k8b",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
+          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=6\u0026streamType=main"
         }
       },
       "name": "Stream for ad-hoc-stream"
-    },
-    "bp-mlk-storefront-loitering": {
-      "channels": {
-        "0": {
-          "name": "main",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:8554/chID=1\u0026streamType=main"
-        }
-      },
-      "name": "Stream for bp-mlk-storefront-loitering"
-    },
-    "detections_store_2": {
-      "channels": {
-        "0": {
-          "name": "main",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=4\u0026streamType=main"
-        }
-      },
-      "name": "Stream for detections_store_2"
-    },
-    "detections_store_3": {
-      "channels": {
-        "0": {
-          "name": "main",
-          "on_demand": true,
-          "url": "rtsp://admin:a123456@74.92.197.254:554/?chID=3\u0026streamType=main"
-        }
-      },
-      "name": "Stream for detections_store_3"
-    },
-    "employee_theft_store_2": {
-      "channels": {
-        "0": {
-          "name": "main",
-          "on_demand": true,
-          "url": "rtsp://admin:987654321aa@96.73.218.186:554/chID=15\u0026streamType=main"
-        }
-      },
-      "name": "Stream for employee_theft_store_2"
-    },
-    "start-live-summarization": {
-      "name": "Stream for start-live-summarization"
-    },
-    "start-live-summarization ": {
-      "name": "Stream for start-live-summarization "
-    },
-    "start-lsummarization": {
-      "name": "Stream for start-lsummarization"
-    },
-    "start-summarization": {
-      "name": "Stream for start-summarization"
     },
     "test": {
       "name": "Stream for test"

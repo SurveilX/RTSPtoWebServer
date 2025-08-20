@@ -45,6 +45,7 @@ type RecordingSession struct {
 	mutex       sync.RWMutex
 }
 
+// RecordingManager manages all recording sessions
 type RecordingManager struct {
 	sessions map[string]*RecordingSession
 	mutex    sync.RWMutex
@@ -58,6 +59,7 @@ func init() {
 	}
 }
 
+// convertIncidentType converts "Phone Usage" to "phone-usage"
 func convertIncidentType(incidentType string) string {
 	converted := strings.ToLower(incidentType)
 	converted = strings.ReplaceAll(converted, " ", "-")
@@ -79,13 +81,13 @@ func generateVSSFilePaths(incidentType, storeID string) (string, string, error) 
 	shortUUID := generateShortUUID()
 	convertedIncidentType := convertIncidentType(incidentType)
 	
-	// Video path: /vss/alerts/{incidentType}/{storeId}/{current_time.strftime('%Y%m%d_%H%M%S')}{uuid.uuid4().hex[:8]}.mp4
+	// path: /vss/alerts/{incidentType}/{storeId}/{current_time.strftime('%Y%m%d_%H%M%S')}{uuid.uuid4().hex[:8]}.mp4
 	videoFileName := fmt.Sprintf("%s%s.mp4", 
 		currentTime.Format("20060102_150405"), 
 		shortUUID)
 	videoPath := filepath.Join("vss", "alerts", convertedIncidentType, storeID, videoFileName)
 	
-	// Poster path: /vss/posters/{incidentType}/{storeId}/{current_time.strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}.jpg
+	// path: /vss/posters/{incidentType}/{storeId}/{current_time.strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}.jpg
 	posterFileName := fmt.Sprintf("%s_%s.jpg", 
 		currentTime.Format("20060102150405"), 
 		shortUUID)
@@ -94,7 +96,73 @@ func generateVSSFilePaths(incidentType, storeID string) (string, string, error) 
 	return videoPath, posterPath, nil
 }
 
-// StartRecording starts a new recording session with VSS naming
+// generateTemporaryFilePaths generates temporary file paths for recording
+func generateTemporaryFilePaths(sessionID string) (string, string, error) {
+	currentTime := time.Now()
+	
+	// temp path: temp/recordings/{sessionID}/{timestamp}.mp4
+	videoFileName := fmt.Sprintf("%s.mp4", currentTime.Format("20060102_150405"))
+	videoPath := filepath.Join("temp", "recordings", sessionID, videoFileName)
+	
+	// temp path: temp/recordings/{sessionID}/{timestamp}.jpg
+	posterFileName := fmt.Sprintf("%s.jpg", currentTime.Format("20060102_150405"))
+	posterPath := filepath.Join("temp", "recordings", sessionID, posterFileName)
+	
+	return videoPath, posterPath, nil
+}
+
+// organizeVSSFiles moves files from temporary location to VSS structure
+func (rm *RecordingManager) organizeVSSFiles(session *RecordingSession, incidentType, storeID string) error {
+	vssVideoPath, vssPosterPath, err := generateVSSFilePaths(incidentType, storeID)
+	if err != nil {
+		return fmt.Errorf("failed to generate VSS paths: %v", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(vssVideoPath), 0755); err != nil {
+		return fmt.Errorf("failed to create VSS video directory: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(vssPosterPath), 0755); err != nil {
+		return fmt.Errorf("failed to create VSS poster directory: %v", err)
+	}
+
+	if _, err := os.Stat(session.FilePath); err == nil {
+		if err := os.Rename(session.FilePath, vssVideoPath); err != nil {
+			return fmt.Errorf("failed to move video file to VSS location: %v", err)
+		}
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"from":       session.FilePath,
+			"to":         vssVideoPath,
+		}).Infoln("Moved video file to VSS location")
+		session.FilePath = vssVideoPath
+	}
+
+	if _, err := os.Stat(session.PosterPath); err == nil {
+		if err := os.Rename(session.PosterPath, vssPosterPath); err != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"error":      err.Error(),
+			}).Warnln("Failed to move poster file to VSS location")
+		} else {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"from":       session.PosterPath,
+				"to":         vssPosterPath,
+			}).Infoln("Moved poster file to VSS location")
+			session.PosterPath = vssPosterPath
+		}
+	}
+
+	session.IncidentType = incidentType
+	session.StoreID = storeID
+
+	return nil
+}
+
+// StartRecording starts a new recording session
 func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, useFFmpeg bool, incidentType, storeID string) (*RecordingSession, error) {
 	rm.mutex.Lock()
 	defer rm.mutex.Unlock()
@@ -108,7 +176,7 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 
 		if _, err := Storage.StreamInfo(streamID); err != nil {
 			streamConfig := StreamST{
-				Name:     fmt.Sprintf("VSS Stream %s", streamID),
+				Name:     fmt.Sprintf("Recording Stream %s", streamID),
 				Channels: make(map[string]ChannelST),
 			}
 			if err := Storage.StreamAdd(streamID, streamConfig); err != nil {
@@ -117,11 +185,11 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		}
 
 		channelConfig := ChannelST{
-			Name:     fmt.Sprintf("VSS Channel %s", channelID),
+			Name:     fmt.Sprintf("Recording Channel %s", channelID),
 			URL:      rtspURL,
-			OnDemand: false, // Keep stream running for recording
+			OnDemand: false,
 			Debug:    false,
-			Audio:    false, // Disable audio for recordings
+			Audio:    false,
 		}
 
 		if err := Storage.StreamChannelAdd(streamID, channelID, channelConfig); err != nil {
@@ -141,9 +209,18 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		return nil, err
 	}
 
-	videoPath, posterPath, err := generateVSSFilePaths(incidentType, storeID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate VSS file paths: %v", err)
+	var videoPath, posterPath string
+
+	if incidentType != "" && storeID != "" {
+		videoPath, posterPath, err = generateVSSFilePaths(incidentType, storeID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate VSS file paths: %v", err)
+		}
+	} else {
+		videoPath, posterPath, err = generateTemporaryFilePaths(sessionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate temporary file paths: %v", err)
+		}
 	}
 
 	if err := os.MkdirAll(filepath.Dir(videoPath), 0755); err != nil {
@@ -194,7 +271,8 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		"store_id":      storeID,
 		"video_path":    videoPath,
 		"poster_path":   posterPath,
-	}).Infoln("VSS Recording started")
+		"temporary":     incidentType == "" || storeID == "",
+	}).Infoln("Recording started")
 
 	return session, nil
 }
@@ -352,26 +430,28 @@ func (rm *RecordingManager) startNativeRecording(session *RecordingSession) erro
 	return nil
 }
 
-// StopRecording stops current recording with callback information
-func (rm *RecordingManager) StopRecording(streamID, channelID, incidentID, callbackURL string) (*RecordingSession, error) {
+// StopRecordingWithNext stops current recording and optionally starts next recording
+func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentID, storeID, incidentType, callbackURL string, isStartNext bool) (*RecordingSession, *RecordingSession, error) {
 	rm.mutex.Lock()
 	defer rm.mutex.Unlock()
 
 	sessionKey := fmt.Sprintf("%s_%s", streamID, channelID)
 	session, exists := rm.sessions[sessionKey]
 	if !exists {
-		return nil, fmt.Errorf("no active recording found for stream %s channel %s", streamID, channelID)
+		return nil, nil, fmt.Errorf("no active recording found for stream %s channel %s", streamID, channelID)
 	}
 
 	session.mutex.Lock()
 	if session.Status != "recording" {
 		session.mutex.Unlock()
-		return session, fmt.Errorf("recording is not active (status: %s)", session.Status)
+		return session, nil, fmt.Errorf("recording is not active (status: %s)", session.Status)
 	}
 
 	session.IncidentID = incidentID
 	session.CallbackURL = callbackURL
 	session.Status = "stopping"
+	originalRTSPURL := session.RTSPURL
+	originalUseFFmpeg := session.UseFFmpeg
 	session.mutex.Unlock()
 
 	session.cancel()
@@ -382,17 +462,29 @@ func (rm *RecordingManager) StopRecording(streamID, channelID, incidentID, callb
 	if session.Status == "stopping" {
 		session.Status = "stopped"
 	}
-	oldSession := *session
 	session.mutex.Unlock()
 
+	if err := rm.organizeVSSFiles(session, incidentType, storeID); err != nil {
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"error":      err.Error(),
+		}).Errorln("Failed to organize files into VSS structure")
+	}
+
+	oldSession := *session
+
 	log.WithFields(logrus.Fields{
-		"module":      "recording",
-		"session_id":  session.ID,
-		"stream":      streamID,
-		"channel":     channelID,
-		"incident_id": incidentID,
-		"duration":    time.Since(session.StartTime).String(),
-	}).Infoln("VSS Recording stopped")
+		"module":        "recording",
+		"session_id":    session.ID,
+		"stream":        streamID,
+		"channel":       channelID,
+		"incident_id":   incidentID,
+		"incident_type": incidentType,
+		"store_id":      storeID,
+		"duration":      time.Since(session.StartTime).String(),
+		"is_start_next": isStartNext,
+	}).Infoln("Recording stopped and organized into VSS structure")
 
 	go func() {
 		if err := rm.processVSSRecording(&oldSession); err != nil {
@@ -404,30 +496,167 @@ func (rm *RecordingManager) StopRecording(streamID, channelID, incidentID, callb
 		}
 	}()
 
-	if session.Continuous {
+	var newSession *RecordingSession
+
+	if isStartNext {
 		go func() {
 			time.Sleep(1 * time.Second)
-			newSession, err := rm.StartRecording(streamID, channelID, session.RTSPURL, session.UseFFmpeg, session.IncidentType, session.StoreID)
+			newSess, err := rm.StartRecording(streamID, channelID, originalRTSPURL, originalUseFFmpeg, "", "")
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"module": "recording",
 					"stream": streamID,
 					"channel": channelID,
 					"error": err.Error(),
-				}).Errorln("Failed to start new continuous recording")
+				}).Errorln("Failed to start new recording after stop")
 			} else {
 				log.WithFields(logrus.Fields{
 					"module":        "recording",
 					"old_session":   session.ID,
-					"new_session":   newSession.ID,
+					"new_session":   newSess.ID,
 					"stream":        streamID,
 					"channel":       channelID,
-				}).Infoln("Started new continuous VSS recording")
+				}).Infoln("Started new recording after stop")
 			}
 		}()
 	}
 
-	return session, nil
+	return session, newSession, nil
+}
+
+// StopRecordingNoIncidentWithNext stops recording without incident details and optionally starts next recording
+func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID string, isStartNext bool) (*RecordingSession, *RecordingSession, error) {
+	rm.mutex.Lock()
+	defer rm.mutex.Unlock()
+
+	sessionKey := fmt.Sprintf("%s_%s", streamID, channelID)
+	session, exists := rm.sessions[sessionKey]
+	if !exists {
+		return nil, nil, fmt.Errorf("no active recording found for stream %s channel %s", streamID, channelID)
+	}
+
+	session.mutex.Lock()
+	if session.Status != "recording" {
+		session.mutex.Unlock()
+		return session, nil, fmt.Errorf("recording is not active (status: %s)", session.Status)
+	}
+
+	session.Status = "stopping"
+	originalRTSPURL := session.RTSPURL
+	originalUseFFmpeg := session.UseFFmpeg
+	session.mutex.Unlock()
+
+	session.cancel()
+
+	time.Sleep(2 * time.Second)
+
+	session.mutex.Lock()
+	if session.Status == "stopping" {
+		session.Status = "stopped"
+	}
+	session.mutex.Unlock()
+
+	log.WithFields(logrus.Fields{
+		"module":        "recording",
+		"session_id":    session.ID,
+		"stream":        streamID,
+		"channel":       channelID,
+		"duration":      time.Since(session.StartTime).String(),
+		"is_start_next": isStartNext,
+	}).Infoln("Recording stopped without incident")
+
+	go func() {
+		if err := rm.cleanupRecordingFiles(session); err != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"error":      err.Error(),
+			}).Errorln("Failed to cleanup recording files")
+		}
+	}()
+
+	var newSession *RecordingSession
+
+	if isStartNext {
+		go func() {
+			time.Sleep(1 * time.Second)
+			newSess, err := rm.StartRecording(streamID, channelID, originalRTSPURL, originalUseFFmpeg, "", "")
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"module": "recording",
+					"stream": streamID,
+					"channel": channelID,
+					"error": err.Error(),
+				}).Errorln("Failed to start new recording after cleanup stop")
+			} else {
+				log.WithFields(logrus.Fields{
+					"module":        "recording",
+					"old_session":   session.ID,
+					"new_session":   newSess.ID,
+					"stream":        streamID,
+					"channel":       channelID,
+				}).Infoln("Started new recording after cleanup stop")
+			}
+		}()
+	}
+
+	return session, newSession, nil
+}
+
+// cleanupRecordingFiles deletes recording files when no incident is generated
+func (rm *RecordingManager) cleanupRecordingFiles(session *RecordingSession) error {
+	if _, err := os.Stat(session.FilePath); err == nil {
+		if err := os.Remove(session.FilePath); err != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"file_path":  session.FilePath,
+				"error":      err.Error(),
+			}).Errorln("Failed to delete video file")
+			return fmt.Errorf("failed to delete video file: %v", err)
+		}
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"file_path":  session.FilePath,
+		}).Infoln("Video file deleted (no incident)")
+	}
+
+	if _, err := os.Stat(session.PosterPath); err == nil {
+		if err := os.Remove(session.PosterPath); err != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"poster_path": session.PosterPath,
+				"error":      err.Error(),
+			}).Warnln("Failed to delete poster file")
+		} else {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"poster_path": session.PosterPath,
+			}).Infoln("Poster file deleted (no incident)")
+		}
+	}
+
+	tempDir := filepath.Dir(session.FilePath)
+	if strings.Contains(tempDir, "temp/recordings/") {
+		if err := os.Remove(tempDir); err != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"temp_dir":   tempDir,
+			}).Debugln("Temporary directory cleanup (may not be empty)")
+		} else {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"temp_dir":   tempDir,
+			}).Infoln("Temporary directory cleaned up")
+		}
+	}
+
+	return nil
 }
 
 // processVSSRecording handles poster generation, upload, and callback
@@ -519,6 +748,7 @@ func (rm *RecordingManager) RemoveRecording(streamID, channelID string) error {
 		}).Infoln("VSS Recording session removed")
 	}
 
+	// Remove stream/channel from configuration
 	if err := Storage.StreamChannelDelete(streamID, channelID); err != nil {
 		log.WithFields(logrus.Fields{
 			"module":  "recording",
@@ -528,6 +758,7 @@ func (rm *RecordingManager) RemoveRecording(streamID, channelID string) error {
 		}).Warnln("Failed to remove channel from config")
 	}
 
+	// If no more channels, remove entire stream
 	if streamInfo, err := Storage.StreamInfo(streamID); err == nil {
 		if len(streamInfo.Channels) == 0 {
 			if err := Storage.StreamDelete(streamID); err != nil {
