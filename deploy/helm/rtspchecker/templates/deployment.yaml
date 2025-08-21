@@ -34,13 +34,11 @@ spec:
         resources: {{ toYaml . | nindent 10 }}
         {{- end }}
         {{- end }}
-        env:
-          {{- range $name, $item := .Values.env }}
-            - name: {{ $name }}
-              {{- $item | toYaml | nindent 14 }}
-          {{- end }}
         ports:
-        - containerPort: {{ .Values.ports.http }}
+        - containerPort: 8083
+          name: http
+          protocol: TCP
+        - containerPort: 554
           name: rtsp
           protocol: TCP
         volumeMounts:

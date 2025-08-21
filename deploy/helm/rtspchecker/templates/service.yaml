@@ -10,7 +10,11 @@ spec:
 {{ include "plexor.selectorLabels" . | indent 6 }}
   ports:
   - protocol: TCP
-    port:  {{ .Values.ports.http }}
+    port:  80
+    targetPort: http
+    name: http
+  - protocol: TCP
+    port:  554
     targetPort: rtsp
     name: rtsp
   sessionAffinity: ClientIP
