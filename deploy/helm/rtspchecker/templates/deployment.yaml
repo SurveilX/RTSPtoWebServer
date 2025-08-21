@@ -1,0 +1,61 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ include "plexor.gename" . }}
+  labels:
+{{ include "plexor.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replica_count }}
+  selector:
+    matchLabels:
+{{ include "plexor.selectorLabels" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "plexor.labels" . | indent 8 }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - {{ include "plexor.gename" . }}
+            topologyKey: "kubernetes.io/hostname"
+      restartPolicy: Always
+      containers:
+      - name: {{ include "plexor.gename" . }}
+        image: {{ .Values.imagesVersion }}
+        imagePullPolicy: Always
+        {{- if .Values.resources }}
+        {{- with .Values.resources }}
+        resources: {{ toYaml . | nindent 10 }}
+        {{- end }}
+        {{- end }}
+        env:
+          {{- range $name, $item := .Values.env }}
+            - name: {{ $name }}
+              {{- $item | toYaml | nindent 14 }}
+          {{- end }}
+        ports:
+        - containerPort: {{ .Values.ports.http }}
+          name: rtsp
+          protocol: TCP
+        volumeMounts:
+          - name: rtspchecker-config
+            mountPath: "/config"
+            readOnly: true
+      volumes:
+      - name: rtspchecker-config
+        secret:
+          secretName: rtspchecker-config
+          items:
+          - key: config-json
+            path: config.json
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
