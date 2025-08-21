@@ -31,6 +31,9 @@ type RecordingSession struct {
 	RTSPURL      string    `json:"rtsp_url"`
 	Continuous   bool      `json:"continuous"`
 
+	FPS          int    `json:"fps,omitempty"`
+	Codec        string `json:"codec,omitempty"`
+
 	IncidentType string `json:"incident_type"`
 	StoreID      string `json:"store_id"`
 	IncidentID   string `json:"incident_id"`
@@ -56,17 +59,22 @@ type RecordingManager struct {
 
 	autoStopTicker *time.Ticker
 	stopChecker    chan bool
+
+	cleanupTicker *time.Ticker
+	cleanupStopper chan bool
 }
 
 var recordingManager *RecordingManager
 
 func init() {
 	recordingManager = &RecordingManager{
-		sessions:    make(map[string]*RecordingSession),
-		stopChecker: make(chan bool),
+		sessions:       make(map[string]*RecordingSession),
+		stopChecker:    make(chan bool),
+		cleanupStopper: make(chan bool),
 	}
 	
 	recordingManager.startAutoStopChecker()
+	recordingManager.startCleanupWorker()
 }
 
 func (rm *RecordingManager) startAutoStopChecker() {
@@ -118,7 +126,7 @@ func (rm *RecordingManager) checkAndStopLongRunningSessions() {
 		}).Warnln("Auto-stopping long-running recording session")
 
 		go func(s *RecordingSession) {
-			_, _, err := rm.StopRecordingNoIncidentWithNext(s.StreamID, s.ChannelID, true)
+			_, _, err := rm.StopRecordingNoIncidentWithNext(s.StreamID, s.ChannelID, false)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"module":     "recording",
@@ -140,6 +148,173 @@ func (rm *RecordingManager) checkAndStopLongRunningSessions() {
 
 func (rm *RecordingManager) stopAutoStopChecker() {
 	close(rm.stopChecker)
+}
+
+// startCleanupWorker starts a worker that runs every 5 minutes to clean up old files
+func (rm *RecordingManager) startCleanupWorker() {
+	rm.cleanupTicker = time.NewTicker(5 * time.Minute)
+	
+	go func() {
+		for {
+			select {
+			case <-rm.cleanupTicker.C:
+				rm.cleanupOldFiles()
+			case <-rm.cleanupStopper:
+				rm.cleanupTicker.Stop()
+				return
+			}
+		}
+	}()
+	
+	log.WithFields(logrus.Fields{
+		"module":        "cleanup",
+		"check_interval": "5m",
+		"max_age":       "2m",
+	}).Infoln("Cleanup worker started")
+}
+
+// cleanupOldFiles removes files older than 2 minutes and empty directories
+func (rm *RecordingManager) cleanupOldFiles() {
+	now := time.Now()
+	maxAge := 2 * time.Minute
+	
+	// Clean up temp/recordings directory
+	tempDir := "temp/recordings"
+	if _, err := os.Stat(tempDir); err == nil {
+		rm.cleanupDirectory(tempDir, now, maxAge)
+	}
+	
+	// Clean up vss directory (only very old files that might be stuck)
+	vssDir := "vss"
+	if _, err := os.Stat(vssDir); err == nil {
+		rm.cleanupDirectory(vssDir, now, 10*time.Minute) // Only clean very old VSS files
+	}
+}
+
+// cleanupDirectory recursively cleans up files and empty directories
+func (rm *RecordingManager) cleanupDirectory(dirPath string, now time.Time, maxAge time.Duration) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"module": "cleanup",
+			"dir":    dirPath,
+			"error":  err.Error(),
+		}).Warnln("Failed to read directory for cleanup")
+		return
+	}
+	
+	filesDeleted := 0
+	dirsDeleted := 0
+	
+	for _, entry := range entries {
+		fullPath := filepath.Join(dirPath, entry.Name())
+		
+		if entry.IsDir() {
+			// Recursively clean subdirectory
+			rm.cleanupDirectory(fullPath, now, maxAge)
+			
+			// Try to remove directory if it's empty
+			if rm.removeEmptyDirectory(fullPath) {
+				dirsDeleted++
+			}
+		} else {
+			// Check file age
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			
+			fileAge := now.Sub(info.ModTime())
+			if fileAge > maxAge {
+				// Check if this file is part of an active recording session
+				if rm.isFileInActiveSession(fullPath) {
+					log.WithFields(logrus.Fields{
+						"module":   "cleanup",
+						"file":     fullPath,
+						"age":      fileAge.String(),
+					}).Debugln("Skipping cleanup of active session file")
+					continue
+				}
+				
+				if err := os.Remove(fullPath); err != nil {
+					log.WithFields(logrus.Fields{
+						"module": "cleanup",
+						"file":   fullPath,
+						"age":    fileAge.String(),
+						"error":  err.Error(),
+					}).Warnln("Failed to delete old file")
+				} else {
+					filesDeleted++
+					log.WithFields(logrus.Fields{
+						"module": "cleanup",
+						"file":   fullPath,
+						"age":    fileAge.String(),
+					}).Infoln("Deleted old file")
+				}
+			}
+		}
+	}
+	
+	if filesDeleted > 0 || dirsDeleted > 0 {
+		log.WithFields(logrus.Fields{
+			"module":        "cleanup",
+			"directory":     dirPath,
+			"files_deleted": filesDeleted,
+			"dirs_deleted":  dirsDeleted,
+		}).Infoln("Cleanup completed for directory")
+	}
+}
+
+// removeEmptyDirectory removes a directory if it's empty
+func (rm *RecordingManager) removeEmptyDirectory(dirPath string) bool {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return false
+	}
+	
+	if len(entries) == 0 {
+		if err := os.Remove(dirPath); err != nil {
+			log.WithFields(logrus.Fields{
+				"module": "cleanup",
+				"dir":    dirPath,
+				"error":  err.Error(),
+			}).Debugln("Failed to remove empty directory")
+			return false
+		}
+		
+		log.WithFields(logrus.Fields{
+			"module": "cleanup",
+			"dir":    dirPath,
+		}).Infoln("Removed empty directory")
+		return true
+	}
+	
+	return false
+}
+
+// isFileInActiveSession checks if a file is part of an active recording session
+func (rm *RecordingManager) isFileInActiveSession(filePath string) bool {
+	rm.mutex.RLock()
+	defer rm.mutex.RUnlock()
+	
+	for _, session := range rm.sessions {
+		session.mutex.RLock()
+		isActive := session.Status == "recording" || session.Status == "stopping"
+		matchesVideo := session.FilePath == filePath
+		matchesPoster := session.PosterPath == filePath
+		session.mutex.RUnlock()
+		
+		if isActive && (matchesVideo || matchesPoster) {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// stopCleanupWorker stops the cleanup worker
+func (rm *RecordingManager) stopCleanupWorker() {
+	close(rm.cleanupStopper)
 }
 
 // convertIncidentType converts "Phone Usage" to "phone-usage"
@@ -235,9 +410,17 @@ func (rm *RecordingManager) organizeVSSFiles(session *RecordingSession, incident
 				"from":       session.PosterPath,
 				"to":         vssPosterPath,
 			}).Infoln("Moved poster file to VSS location")
-			session.PosterPath = vssPosterPath
 		}
+	} else {
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"old_path":   session.PosterPath,
+			"new_path":   vssPosterPath,
+		}).Infoln("Poster file doesn't exist yet, updating path for future generation")
 	}
+
+	session.PosterPath = vssPosterPath
 
 	session.IncidentType = incidentType
 	session.StoreID = storeID
@@ -246,7 +429,7 @@ func (rm *RecordingManager) organizeVSSFiles(session *RecordingSession, incident
 }
 
 // StartRecording starts a new recording session
-func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, useFFmpeg bool, incidentType, storeID string) (*RecordingSession, error) {
+func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, useFFmpeg bool, incidentType, storeID string, fps int, codec string) (*RecordingSession, error) {
 	rm.mutex.Lock()
 	defer rm.mutex.Unlock()
 
@@ -328,6 +511,13 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		return nil, fmt.Errorf("failed to create poster directory: %v", err)
 	}
 
+	if fps <= 0 {
+		fps = 30
+	}
+	if codec == "" {
+		codec = "h264"
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	session := &RecordingSession{
 		ID:           sessionID,
@@ -340,6 +530,8 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		UseFFmpeg:    useFFmpeg,
 		RTSPURL:      rtspURL,
 		Continuous:   true,
+		FPS:          fps,
+		Codec:        codec,
 		IncidentType: incidentType,
 		StoreID:      storeID,
 		ctx:          ctx,
@@ -365,6 +557,8 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		"session_id":    sessionID,
 		"stream":        streamID,
 		"channel":       channelID,
+		"fps":           fps,
+		"codec":         codec,
 		"method":        map[bool]string{true: "ffmpeg", false: "native"}[useFFmpeg],
 		"incident_type": incidentType,
 		"store_id":      storeID,
@@ -435,7 +629,11 @@ func (session *RecordingSession) normalizePacketTimestamp(packet *av.Packet) *av
 		relativeTime := packet.Time - session.baseTimestamp
 
 		if relativeTime <= session.lastTimestamp {
-			relativeTime = session.lastTimestamp + time.Millisecond*33
+			frameDuration := time.Second / time.Duration(session.FPS)
+			if frameDuration == 0 {
+				frameDuration = time.Millisecond * 33
+			}
+			relativeTime = session.lastTimestamp + frameDuration
 		}
 		
 		session.lastTimestamp = relativeTime
@@ -610,6 +808,8 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 	session.Status = "stopping"
 	originalRTSPURL := session.RTSPURL
 	originalUseFFmpeg := session.UseFFmpeg
+	originalFPS := session.FPS
+	originalCodec := session.Codec
 	session.mutex.Unlock()
 
 	session.cancel()
@@ -633,8 +833,6 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 			}).Errorln("Failed to organize files into VSS structure")
 		}
 
-		oldSession := *session
-
 		log.WithFields(logrus.Fields{
 			"module":        "recording",
 			"session_id":    session.ID,
@@ -648,15 +846,15 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 			"prev_status":   currentStatus,
 		}).Infoln("Recording stopped and organized into VSS structure")
 
-		go func() {
-			if err := rm.processVSSRecording(&oldSession); err != nil {
+		go func(vssSession *RecordingSession) {
+			if err := rm.processVSSRecording(vssSession); err != nil {
 				log.WithFields(logrus.Fields{
 					"module":     "recording",
-					"session_id": oldSession.ID,
+					"session_id": vssSession.ID,
 					"error":      err.Error(),
 				}).Errorln("Failed to process VSS recording")
 			}
-		}()
+		}(session)
 	} else {
 		log.WithFields(logrus.Fields{
 			"module":     "recording",
@@ -670,7 +868,7 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 	if isStartNext {
 		go func() {
 			time.Sleep(1 * time.Second)
-			newSess, err := rm.StartRecording(streamID, channelID, originalRTSPURL, originalUseFFmpeg, "", "")
+			newSess, err := rm.StartRecording(streamID, channelID, originalRTSPURL, originalUseFFmpeg, "", "", originalFPS, originalCodec)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"module": "recording",
@@ -715,6 +913,8 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 	session.Status = "stopping"
 	originalRTSPURL := session.RTSPURL
 	originalUseFFmpeg := session.UseFFmpeg
+	originalFPS := session.FPS
+	originalCodec := session.Codec
 	session.mutex.Unlock()
 
 	session.cancel()
@@ -754,7 +954,7 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 	if isStartNext {
 		go func() {
 			time.Sleep(1 * time.Second)
-			newSess, err := rm.StartRecording(streamID, channelID, originalRTSPURL, originalUseFFmpeg, "", "")
+			newSess, err := rm.StartRecording(streamID, channelID, originalRTSPURL, originalUseFFmpeg, "", "", originalFPS, originalCodec)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"module": "recording",
@@ -780,25 +980,31 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 
 // cleanupRecordingFiles deletes recording files when no incident is generated
 func (rm *RecordingManager) cleanupRecordingFiles(session *RecordingSession) error {
+	var deletedFiles []string
+	var errors []string
+
 	if _, err := os.Stat(session.FilePath); err == nil {
 		if err := os.Remove(session.FilePath); err != nil {
+			errors = append(errors, fmt.Sprintf("video: %v", err))
 			log.WithFields(logrus.Fields{
 				"module":     "recording",
 				"session_id": session.ID,
 				"file_path":  session.FilePath,
 				"error":      err.Error(),
 			}).Errorln("Failed to delete video file")
-			return fmt.Errorf("failed to delete video file: %v", err)
+		} else {
+			deletedFiles = append(deletedFiles, session.FilePath)
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"file_path":  session.FilePath,
+			}).Infoln("Video file deleted (no incident)")
 		}
-		log.WithFields(logrus.Fields{
-			"module":     "recording",
-			"session_id": session.ID,
-			"file_path":  session.FilePath,
-		}).Infoln("Video file deleted (no incident)")
 	}
 
 	if _, err := os.Stat(session.PosterPath); err == nil {
 		if err := os.Remove(session.PosterPath); err != nil {
+			errors = append(errors, fmt.Sprintf("poster: %v", err))
 			log.WithFields(logrus.Fields{
 				"module":     "recording",
 				"session_id": session.ID,
@@ -806,6 +1012,7 @@ func (rm *RecordingManager) cleanupRecordingFiles(session *RecordingSession) err
 				"error":      err.Error(),
 			}).Warnln("Failed to delete poster file")
 		} else {
+			deletedFiles = append(deletedFiles, session.PosterPath)
 			log.WithFields(logrus.Fields{
 				"module":     "recording",
 				"session_id": session.ID,
@@ -814,28 +1021,62 @@ func (rm *RecordingManager) cleanupRecordingFiles(session *RecordingSession) err
 		}
 	}
 
-	tempDir := filepath.Dir(session.FilePath)
-	if strings.Contains(tempDir, "temp/recordings/") {
-		if err := os.Remove(tempDir); err != nil {
-			log.WithFields(logrus.Fields{
-				"module":     "recording",
-				"session_id": session.ID,
-				"temp_dir":   tempDir,
-			}).Debugln("Temporary directory cleanup (may not be empty)")
-		} else {
-			log.WithFields(logrus.Fields{
-				"module":     "recording",
-				"session_id": session.ID,
-				"temp_dir":   tempDir,
-			}).Infoln("Temporary directory cleaned up")
-		}
+	rm.cleanupSessionDirectories(session)
+
+	if len(errors) > 0 {
+		return fmt.Errorf("cleanup errors: %s", strings.Join(errors, ", "))
 	}
+
+	log.WithFields(logrus.Fields{
+		"module":       "recording",
+		"session_id":   session.ID,
+		"deleted_files": len(deletedFiles),
+	}).Infoln("Session cleanup completed")
 
 	return nil
 }
 
+// cleanupSessionDirectories removes empty directories after file deletion
+func (rm *RecordingManager) cleanupSessionDirectories(session *RecordingSession) {
+	directories := make(map[string]bool)
+	
+	if session.FilePath != "" {
+		directories[filepath.Dir(session.FilePath)] = true
+	}
+	if session.PosterPath != "" {
+		directories[filepath.Dir(session.PosterPath)] = true
+	}
+
+	for dir := range directories {
+		rm.removeEmptyDirectoryChain(dir)
+	}
+}
+
+// removeEmptyDirectoryChain removes empty directories up the chain
+func (rm *RecordingManager) removeEmptyDirectoryChain(dirPath string) {
+	if dirPath == "." || dirPath == "/" || dirPath == "temp" || dirPath == "vss" {
+		return
+	}
+
+	if rm.removeEmptyDirectory(dirPath) {
+		parentDir := filepath.Dir(dirPath)
+		if parentDir != dirPath {
+			rm.removeEmptyDirectoryChain(parentDir)
+		}
+	}
+}
+
 // processVSSRecording handles poster generation, upload, and callback
 func (rm *RecordingManager) processVSSRecording(session *RecordingSession) error {
+	log.WithFields(logrus.Fields{
+		"module":      "recording",
+		"session_id":  session.ID,
+		"video_path":  session.FilePath,
+		"poster_path": session.PosterPath,
+		"is_vss_video": strings.Contains(session.FilePath, "vss/"),
+		"is_vss_poster": strings.Contains(session.PosterPath, "vss/"),
+	}).Infoln("About to upload files - verifying VSS paths")
+
 	if err := rm.generateVSSPoster(session); err != nil {
 		log.WithFields(logrus.Fields{
 			"module":     "recording",

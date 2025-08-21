@@ -12,6 +12,8 @@ import (
 type VSSRecordingStartRequest struct {
 	RTSPURL   string `json:"rtsp_url"`
 	UseFFmpeg bool   `json:"use_ffmpeg,omitempty"`
+	FPS       int    `json:"fps,omitempty"`
+	Codec     string `json:"codec,omitempty"`
 }
 
 // VSSRecordingStopRequest represents the request to stop recording with incident details
@@ -43,10 +45,13 @@ type RecordingTiming struct {
 
 // HTTPAPIServerStartRecording starts recording for a stream channel (no incident details yet)
 func HTTPAPIServerStartRecording(c *gin.Context) {
+	streamID := c.Param("uuid")
+	channelID := c.Param("channel")
+
 	requestLogger := log.WithFields(logrus.Fields{
 		"module":  "http_recording",
-		"stream":  c.Param("uuid"),
-		"channel": c.Param("channel"),
+		"stream":  streamID,
+		"channel": channelID,
 		"func":    "HTTPAPIServerStartRecording",
 	})
 
@@ -79,6 +84,8 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 		payload.UseFFmpeg,
 		"",
 		"",
+		payload.FPS,
+		payload.Codec,
 	)
 
 	if err != nil {
@@ -116,6 +123,8 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 		"session_id": session.ID,
 		"method":     timing.Method,
 		"rtsp_url":   payload.RTSPURL,
+		"fps":        session.FPS,
+		"codec":      session.Codec,
 	}).Infoln("Recording started via API (no incident details yet)")
 }
 
@@ -308,4 +317,11 @@ func HTTPAPIServerRecordingStatus(c *gin.Context) {
 		Message: "Recording status retrieved",
 		Session: session,
 	})
+
+	requestLogger.WithFields(logrus.Fields{
+		"session_id": session.ID,
+		"is_active":  session.Status == "recording",
+		"fps":        session.FPS,
+		"codec":      session.Codec,
+	}).Debugln("Recording status retrieved successfully")
 }
