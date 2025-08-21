@@ -43,7 +43,6 @@ type RecordingSession struct {
 	ffmpegCmd   *exec.Cmd
 	clientID    string
 	mutex       sync.RWMutex
-	autoStopTimer *time.Timer
 
 	lastTimestamp time.Duration
 	baseTimestamp time.Duration
@@ -54,14 +53,93 @@ type RecordingSession struct {
 type RecordingManager struct {
 	sessions map[string]*RecordingSession
 	mutex    sync.RWMutex
+
+	autoStopTicker *time.Ticker
+	stopChecker    chan bool
 }
 
 var recordingManager *RecordingManager
 
 func init() {
 	recordingManager = &RecordingManager{
-		sessions: make(map[string]*RecordingSession),
+		sessions:    make(map[string]*RecordingSession),
+		stopChecker: make(chan bool),
 	}
+	
+	recordingManager.startAutoStopChecker()
+}
+
+func (rm *RecordingManager) startAutoStopChecker() {
+	rm.autoStopTicker = time.NewTicker(45 * time.Second)
+	
+	go func() {
+		for {
+			select {
+			case <-rm.autoStopTicker.C:
+				rm.checkAndStopLongRunningSessions()
+			case <-rm.stopChecker:
+				rm.autoStopTicker.Stop()
+				return
+			}
+		}
+	}()
+	
+	log.WithFields(logrus.Fields{
+		"module":        "recording",
+		"check_interval": "45s",
+		"max_duration":   "1m30s",
+	}).Infoln("Auto-stop checker started")
+}
+
+// checkAndStopLongRunningSessions checks for sessions running longer than 1m30s
+func (rm *RecordingManager) checkAndStopLongRunningSessions() {
+	rm.mutex.RLock()
+	var sessionsToStop []*RecordingSession
+	
+	maxDuration := 90 * time.Second // 1 minute 30 seconds
+	
+	for _, session := range rm.sessions {
+		session.mutex.RLock()
+		if session.Status == "recording" && time.Since(session.StartTime) > maxDuration {
+			sessionsToStop = append(sessionsToStop, session)
+		}
+		session.mutex.RUnlock()
+	}
+	rm.mutex.RUnlock()
+
+	for _, session := range sessionsToStop {
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"stream":     session.StreamID,
+			"channel":    session.ChannelID,
+			"duration":   time.Since(session.StartTime).String(),
+			"max_duration": maxDuration.String(),
+		}).Warnln("Auto-stopping long-running recording session")
+
+		go func(s *RecordingSession) {
+			_, _, err := rm.StopRecordingNoIncidentWithNext(s.StreamID, s.ChannelID, true)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"module":     "recording",
+					"session_id": s.ID,
+					"error":      err.Error(),
+				}).Errorln("Failed to auto-stop long-running recording")
+			}
+		}(session)
+	}
+	
+	if len(sessionsToStop) > 0 {
+		log.WithFields(logrus.Fields{
+			"module":         "recording",
+			"stopped_count":  len(sessionsToStop),
+			"check_interval": "45s",
+		}).Infoln("Auto-stop check completed")
+	}
+}
+
+func (rm *RecordingManager) stopAutoStopChecker() {
+	close(rm.stopChecker)
 }
 
 // convertIncidentType converts "Phone Usage" to "phone-usage"
@@ -214,10 +292,6 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 				"channel":    channelID,
 			}).Infoln("Cleaning up failed session before starting new recording")
 
-			if session.autoStopTimer != nil {
-				session.autoStopTimer.Stop()
-			}
-
 			if session.cancel != nil {
 				session.cancel()
 			}
@@ -273,10 +347,6 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		timestampSet: false,
 	}
 
-	session.autoStopTimer = time.AfterFunc(45*time.Second, func() {
-		rm.autoStopRecording(session)
-	})
-
 	if useFFmpeg {
 		err = rm.startFFmpegRecording(session)
 	} else {
@@ -284,7 +354,6 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 	}
 
 	if err != nil {
-		session.autoStopTimer.Stop()
 		cancel()
 		return nil, err
 	}
@@ -303,37 +372,10 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 		"poster_path":   posterPath,
 		"temporary":     incidentType == "" || storeID == "",
 		"auto_stop":     "45s",
+		"max_duration":  "1m30s",
 	}).Infoln("Recording started")
 
 	return session, nil
-}
-
-// autoStopRecording automatically stops recording after timeout
-func (rm *RecordingManager) autoStopRecording(session *RecordingSession) {
-	session.mutex.Lock()
-	if session.Status != "recording" && session.Status != "failed" {
-		session.mutex.Unlock()
-		return
-	}
-	session.mutex.Unlock()
-
-	log.WithFields(logrus.Fields{
-		"module":     "recording",
-		"session_id": session.ID,
-		"stream":     session.StreamID,
-		"channel":    session.ChannelID,
-		"duration":   time.Since(session.StartTime).String(),
-		"status":     session.Status,
-	}).Warnln("Auto-stopping recording after 45 seconds timeout")
-
-	_, _, err := rm.StopRecordingNoIncidentWithNext(session.StreamID, session.ChannelID, false)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"module":     "recording",
-			"session_id": session.ID,
-			"error":      err.Error(),
-		}).Errorln("Failed to auto-stop recording")
-	}
 }
 
 // startFFmpegRecording starts recording using FFmpeg with VSS paths
@@ -563,10 +605,6 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 		return session, nil, fmt.Errorf("recording is not active (status: %s)", currentStatus)
 	}
 
-	if session.autoStopTimer != nil {
-		session.autoStopTimer.Stop()
-	}
-
 	session.IncidentID = incidentID
 	session.CallbackURL = callbackURL
 	session.Status = "stopping"
@@ -583,6 +621,8 @@ func (rm *RecordingManager) StopRecordingWithNext(streamID, channelID, incidentI
 		session.Status = "stopped"
 	}
 	session.mutex.Unlock()
+
+	delete(rm.sessions, sessionKey)
 
 	if _, err := os.Stat(session.FilePath); err == nil {
 		if err := rm.organizeVSSFiles(session, incidentType, storeID); err != nil {
@@ -672,10 +712,6 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 		return session, nil, fmt.Errorf("recording is not active (status: %s)", currentStatus)
 	}
 
-	if session.autoStopTimer != nil {
-		session.autoStopTimer.Stop()
-	}
-
 	session.Status = "stopping"
 	originalRTSPURL := session.RTSPURL
 	originalUseFFmpeg := session.UseFFmpeg
@@ -690,6 +726,8 @@ func (rm *RecordingManager) StopRecordingNoIncidentWithNext(streamID, channelID 
 		session.Status = "stopped"
 	}
 	session.mutex.Unlock()
+
+	delete(rm.sessions, sessionKey)
 
 	log.WithFields(logrus.Fields{
 		"module":        "recording",
@@ -868,10 +906,6 @@ func (rm *RecordingManager) RemoveRecording(streamID, channelID string) error {
 	if exists {
 		session.mutex.Lock()
 		session.Continuous = false
-
-		if session.autoStopTimer != nil {
-			session.autoStopTimer.Stop()
-		}
 
 		if session.Status == "recording" || session.Status == "failed" {
 			session.cancel()

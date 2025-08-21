@@ -85,9 +85,9 @@ func HTTPAPIServerStreamHLSLLM3U8(c *gin.Context) {
 
 	if !Storage.StreamChannelExist(c.Param("uuid"), c.Param("channel")) {
 		c.IndentedJSON(500, Message{Status: 0, Payload: ErrorStreamNotFound.Error()})
-		requestLogger.WithFields(logrus.Fields{
-			"call": "StreamChannelExist",
-		}).Errorln(ErrorStreamNotFound.Error())
+		// requestLogger.WithFields(logrus.Fields{
+		// 	"call": "StreamChannelExist",
+		// }).Errorln(ErrorStreamNotFound.Error())
 		return
 	}
 
