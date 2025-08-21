@@ -4,5 +4,5 @@ resources:
     memory: "600Mi"
     cpu: "0.05"
   limits:
-    memory: "2Gi"
+    memory: "800Mi"
     cpu: "0.5"
