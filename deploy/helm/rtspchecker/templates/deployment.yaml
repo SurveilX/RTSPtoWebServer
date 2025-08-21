@@ -41,17 +41,17 @@ spec:
         - containerPort: 554
           name: rtsp
           protocol: TCP
-        volumeMounts:
-          - name: rtspchecker-config
-            mountPath: "/config"
-            readOnly: true
-      volumes:
-      - name: rtspchecker-config
-        secret:
-          secretName: rtspchecker-config
-          items:
-          - key: config-json
-            path: config.json
+      #   volumeMounts:
+      #     - name: rtspchecker-config
+      #       mountPath: "/config"
+      #       readOnly: true
+      # volumes:
+      # - name: rtspchecker-config
+      #   secret:
+      #     secretName: rtspchecker-config
+      #     items:
+      #     - key: config-json
+      #       path: config.json
   strategy:
     type: RollingUpdate
     rollingUpdate:
