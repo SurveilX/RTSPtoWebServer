@@ -4,8 +4,6 @@ FROM --platform=${BUILDPLATFORM} golang:1.23-alpine3.21 AS builder
 
 RUN apk add git
 
-RUN apt-get update && apt-get install -y ffmpeg
-
 WORKDIR /go/src/app
 COPY . .
 
@@ -19,8 +17,8 @@ RUN go get \
 FROM alpine:3.21
 
 WORKDIR /app
-RUN apk add --no-cache ffmpeg
 
+RUN apk add --no-cache ffmpeg
 
 COPY --from=builder /go/src/app/rtsp-to-web /app/
 
