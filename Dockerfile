@@ -19,6 +19,8 @@ RUN go get \
 FROM alpine:3.21
 
 WORKDIR /app
+RUN apk add --no-cache ffmpeg
+
 
 COPY --from=builder /go/src/app/rtsp-to-web /app/
 
