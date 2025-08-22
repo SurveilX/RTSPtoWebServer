@@ -28,6 +28,11 @@ spec:
       containers:
       - name: {{ include "plexor.gename" . }}
         image: {{ .Values.imagesVersion }}
+        env:
+          {{- range $name, $item := .Values.env }}
+            - name: {{ $name }}
+              {{- $item | toYaml | nindent 14 }}
+          {{- end }}
         imagePullPolicy: Always
         {{- if .Values.resources }}
         {{- with .Values.resources }}
