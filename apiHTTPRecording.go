@@ -77,6 +77,41 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 		return
 	}
 
+	if !Storage.StreamExist(streamID) {
+		requestLogger.Infoln("Stream does not exist, creating new stream")
+		err := Storage.StreamAdd(streamID, StreamST{
+			Name: "Auto-created stream for recording",
+			Channels: make(map[string]ChannelST),
+		})
+		if err != nil {
+			c.IndentedJSON(500, VSSRecordingResponse{
+				Success: false,
+				Message: "Failed to create stream",
+				Error:   err.Error(),
+			})
+			requestLogger.WithFields(logrus.Fields{"call": "StreamAdd"}).Errorln(err.Error())
+			return
+		}
+	} else if !Storage.StreamChannelExist(streamID, channelID) {
+		requestLogger.Infoln("Channel does not exist, creating new channel")
+		err := Storage.StreamChannelAdd(streamID, channelID, ChannelST{
+			Name:     "Auto-created channel for recording",
+			URL:      payload.RTSPURL,
+			OnDemand: true,
+			Debug:    false,
+			Audio:    false,
+		})
+		if err != nil {
+			c.IndentedJSON(500, VSSRecordingResponse{
+				Success: false,
+				Message: "Failed to create channel",
+				Error:   err.Error(),
+			})
+			requestLogger.WithFields(logrus.Fields{"call": "StreamChannelAdd"}).Errorln(err.Error())
+			return
+		}
+	}
+
 	session, err := recordingManager.StartRecording(
 		c.Param("uuid"), 
 		c.Param("channel"), 

@@ -15,6 +15,14 @@ func (obj *StorageST) MarshalledStreamsList() (interface{}, error) {
 	return val, nil
 }
 
+//StreamExist checks if a stream exists
+func (obj *StorageST) StreamExist(uuid string) bool {
+	obj.mutex.RLock()
+	defer obj.mutex.RUnlock()
+	_, ok := obj.Streams[uuid]
+	return ok
+}
+
 //StreamAdd add stream
 func (obj *StorageST) StreamAdd(uuid string, val StreamST) error {
 	obj.mutex.Lock()
@@ -30,6 +38,9 @@ func (obj *StorageST) StreamAdd(uuid string, val StreamST) error {
 	}
 	if _, ok := obj.Streams[uuid]; ok {
 		return ErrorStreamAlreadyExists
+	}
+	if val.Channels == nil {
+		val.Channels = make(map[string]ChannelST)
 	}
 	for i, i2 := range val.Channels {
 		i2 = obj.StreamChannelMake(i2)
@@ -60,6 +71,9 @@ func (obj *StorageST) StreamEdit(uuid string, val StreamST) error {
 				obj.Streams[uuid] = tmp
 				i2.signals <- SignalStreamStop
 			}
+		}
+		if val.Channels == nil {
+			val.Channels = make(map[string]ChannelST)
 		}
 		for i3, i4 := range val.Channels {
 			i4 = obj.StreamChannelMake(i4)
@@ -163,8 +177,8 @@ func (obj *StorageST) StreamChannelsAdd(uuid string, channels map[string]Channel
 		return nil, ErrorStreamNotFound
 	}
 
-	if obj.Streams[uuid].Channels == nil {
-		stream := obj.Streams[uuid]
+	stream := obj.Streams[uuid]
+	if stream.Channels == nil {
 		stream.Channels = make(map[string]ChannelST)
 		obj.Streams[uuid] = stream
 	}

@@ -440,7 +440,7 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 			"channel": channelID,
 		}).Infoln("Stream/channel not found, creating automatically")
 
-		if _, err := Storage.StreamInfo(streamID); err != nil {
+		if !Storage.StreamExist(streamID) {
 			streamConfig := StreamST{
 				Name:     fmt.Sprintf("Recording Stream %s", streamID),
 				Channels: make(map[string]ChannelST),
@@ -448,6 +448,11 @@ func (rm *RecordingManager) StartRecording(streamID, channelID, rtspURL string, 
 			if err := Storage.StreamAdd(streamID, streamConfig); err != nil {
 				return nil, fmt.Errorf("failed to create stream: %v", err)
 			}
+			
+			log.WithFields(logrus.Fields{
+				"module":  "recording",
+				"stream":  streamID,
+			}).Infoln("Created new stream for recording")
 		}
 
 		channelConfig := ChannelST{
