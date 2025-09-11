@@ -1,0 +1,39 @@
+replica_count: 1
+resources:
+  requests:
+    memory: "600Mi"
+    cpu: "0.05"
+  limits:
+    memory: "800Mi"
+    cpu: "0.5"
+env:
+  DELETE_LOCAL_AFTER_UPLOAD:
+    valueFrom:
+      secretKeyRef:
+        name: rtspchecker-do-config
+        key: DELETE_LOCAL_AFTER_UPLOAD
+  DO_SPACES_BUCKET:
+    valueFrom:
+      secretKeyRef:
+        name: rtspchecker-do-config
+        key: DO_SPACES_BUCKET
+  DO_SPACES_REGION:
+    valueFrom:
+      secretKeyRef:
+        name: rtspchecker-do-config
+        key: DO_SPACES_REGION
+  DO_SPACES_ENDPOINT:
+    valueFrom:
+      secretKeyRef:
+        name: rtspchecker-do-config
+        key: DO_SPACES_ENDPOINT
+  DO_SPACES_SECRET_KEY:
+    valueFrom:
+      secretKeyRef:
+        name: rtspchecker-do-config
+        key: DO_SPACES_SECRET_KEY
+  DO_SPACES_ACCESS_KEY:
+    valueFrom:
+      secretKeyRef:
+        name: rtspchecker-do-config
+        key: DO_SPACES_ACCESS_KEY
