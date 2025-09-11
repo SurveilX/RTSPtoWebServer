@@ -1,0 +1,35 @@
+name: '[STAGE] Production deployment'
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      skip_deploy:
+        type: boolean
+        description: 'Skip deploy(Test PR build)'
+        default: false
+
+jobs:
+  rtsp_checker:
+    uses: ./.github/workflows/build-deploy-template.yml
+    if: |-
+      ${{ 
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' ) ||
+        (github.event_name == 'pull_request')
+      }}
+    with:
+      service_name: "rtspchecker"
+      aws_region: "${{ vars.AWS_REGION }}"
+      environment: "services-stage"
+      eks_cluster_name: "plexor-stage"
+      dockerFilePath: "Dockerfile"
+      dockerContextDir: "."
+      helmChartDir: "deploy/helm/rtspchecker"
+      app_env: "staging"
+    secrets:
+      gh_aws_access_key_id: ${{ secrets.GH_AWS_ACCESS_KEY_ID }}
+      gh_aws_secret_key_id: ${{ secrets.GH_AWS_SECRET_ACCESS_KEY }}
+      aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+  
