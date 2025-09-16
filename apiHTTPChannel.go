@@ -69,10 +69,12 @@ func HTTPAPIServerStreamChannelReload(c *gin.Context) {
 
 //HTTPAPIServerStreamChannelEdit function edit stream
 func HTTPAPIServerStreamChannelEdit(c *gin.Context) {
+	safeContext := c.Copy()
+
 	requestLogger := log.WithFields(logrus.Fields{
 		"module":  "http_stream",
-		"stream":  c.Param("uuid"),
-		"channel": c.Param("channel"),
+		"stream":  safeContext.Param("uuid"),
+		"channel": safeContext.Param("channel"),
 		"func":    "HTTPAPIServerStreamChannelEdit",
 	})
 
@@ -85,7 +87,7 @@ func HTTPAPIServerStreamChannelEdit(c *gin.Context) {
 		}).Errorln(err.Error())
 		return
 	}
-	err = Storage.StreamChannelEdit(c.Param("uuid"), c.Param("channel"), payload)
+	err = Storage.StreamChannelEdit(safeContext.Param("uuid"), safeContext.Param("channel"), payload)
 	if err != nil {
 		c.IndentedJSON(500, Message{Status: 0, Payload: err.Error()})
 		requestLogger.WithFields(logrus.Fields{

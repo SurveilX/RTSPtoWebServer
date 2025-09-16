@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"time"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +23,14 @@ type VSSRecordingStopRequest struct {
 	IncidentType string `json:"incident_type,omitempty"`
 	CallbackURL  string `json:"callback_url,omitempty"`
 	IsStartNext  bool   `json:"is_start_next,omitempty"`
+}
+
+// VSSRecordingUploadRequest represents the request to upload a recording
+type VSSRecordingUploadRequest struct {
+	IncidentID   string `json:"incident_id" binding:"required"`
+	StoreID      string `json:"store_id" binding:"required"`
+	IncidentType string `json:"incident_type" binding:"required"`
+	CallbackURL  string `json:"callback_url" binding:"required"`
 }
 
 // VSSRecordingResponse represents the response for recording operations
@@ -155,20 +163,166 @@ func HTTPAPIServerStartRecording(c *gin.Context) {
 	})
 
 	requestLogger.WithFields(logrus.Fields{
-		"session_id": session.ID,
-		"method":     timing.Method,
-		"rtsp_url":   payload.RTSPURL,
-		"fps":        session.FPS,
-		"codec":      session.Codec,
+		"session_id":     session.ID,
+		"method":         timing.Method,
+		"rtsp_url":       payload.RTSPURL,
+		"fps":            session.FPS,
+		"codec":          session.Codec,
+		"start_duration": session.StartDuration.String(),
 	}).Infoln("Recording started via API (no incident details yet)")
+}
+
+// HTTPAPIStopAndStart handles stop and start request
+func HTTPAPIServerStopAndStart(c *gin.Context) {
+	requestStart := time.Now()
+	streamID := c.Param("uuid")
+	channelID := c.Param("channel")
+
+	requestLogger := log.WithFields(logrus.Fields{
+		"module":     "recording_api",
+		"action":     "fast_stop_start",
+		"stream_id":  streamID,
+		"channel_id": channelID,
+	})
+
+	requestLogger.WithFields(logrus.Fields{
+		"step": "api_entry",
+	}).Infoln("HTTPAPIServerStopAndStart: API request received")
+
+	requestLogger.WithFields(logrus.Fields{
+		"step": "call_manager",
+	}).Infoln("HTTPAPIServerStopAndStart: Calling recordingManager.StopAndStart")
+
+	oldSession, newSession, err := recordingManager.StopAndStart(streamID, channelID)
+	
+	requestLogger.WithFields(logrus.Fields{
+		"step":     "manager_returned",
+		"duration": time.Since(requestStart).String(),
+		"error":    err,
+	}).Infoln("HTTPAPIServerStopAndStart: recordingManager.StopAndStart returned")
+	
+	if err != nil {
+		requestLogger.WithFields(logrus.Fields{
+			"step":  "error_response",
+			"error": err.Error(),
+		}).Errorln("HTTPAPIServerStopAndStart: Failed to stop and start recording")
+		
+		c.IndentedJSON(500, VSSRecordingResponse{
+			Success: false,
+			Message: "Failed to stop and start recording",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	requestLogger.WithFields(logrus.Fields{
+		"step": "build_response",
+	}).Infoln("HTTPAPIServerStopAndStart: Building response")
+
+	response := VSSRecordingResponse{
+		Success:    true,
+		Message:    "Recording stop and start completed successfully",
+		Session:    oldSession,
+		NewSession: newSession,
+	}
+
+	requestLogger.WithFields(logrus.Fields{
+		"step": "send_response",
+	}).Infoln("HTTPAPIServerStopAndStart: Sending response")
+
+	c.IndentedJSON(200, response)
+
+	requestLogger.WithFields(logrus.Fields{
+		"old_session_id": func() string { if oldSession != nil { return oldSession.ID } else { return "none" } }(),
+		"new_session_id": func() string { if newSession != nil { return newSession.ID } else { return "none" } }(),
+		"stop_duration":  func() string { if oldSession != nil { return oldSession.StopDuration.String() } else { return "n/a" } }(),
+		"start_duration": func() string { if newSession != nil { return newSession.StartDuration.String() } else { return "n/a" } }(),
+		"total_duration": time.Since(requestStart).String(),
+		"step":           "api_complete",
+	}).Infoln("HTTPAPIServerStopAndStart: Stop and start completed successfully")
+}
+
+// HTTPAPIUploadRecording handles the upload recording request
+func HTTPAPIServerUploadRecording(c *gin.Context) {
+	streamID := c.Param("uuid")
+	channelID := c.Param("channel")
+
+	requestLogger := log.WithFields(logrus.Fields{
+		"module": "recording_api",
+		"action": "upload",
+		"stream_id": streamID,
+		"channel_id": channelID,
+	})
+
+	requestLogger.Infoln("Upload recording request")
+
+	var payload VSSRecordingUploadRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.IndentedJSON(400, VSSRecordingResponse{
+			Success: false,
+			Message: "Invalid JSON format in request body.",
+			Error:   err.Error(),
+		})
+		requestLogger.WithFields(logrus.Fields{"call": "BindJSON"}).Errorln(err.Error())
+		return
+	}
+
+	payload.IncidentID = strings.TrimSpace(payload.IncidentID)
+	payload.StoreID = strings.TrimSpace(payload.StoreID)
+	payload.IncidentType = strings.TrimSpace(payload.IncidentType)
+	payload.CallbackURL = strings.TrimSpace(payload.CallbackURL)
+
+	session, err := recordingManager.GetRecordingStatus(streamID, channelID)
+	if err != nil {
+		c.IndentedJSON(404, VSSRecordingResponse{
+			Success: false,
+			Message: "No active recording session found for this stream/channel",
+			Error:   err.Error(),
+		})
+		requestLogger.WithFields(logrus.Fields{"call": "GetRecordingStatus"}).Errorln(err.Error())
+		return
+	}
+
+	requestLogger.WithFields(logrus.Fields{
+		"session_id":    session.ID,
+		"incident_id":   payload.IncidentID,
+		"store_id":      payload.StoreID,
+		"incident_type": payload.IncidentType,
+		"callback_url":  payload.CallbackURL,
+	}).Debugln("Processing upload recording request")
+
+	if err := recordingManager.QueueUpload(session.ID, session.FilePath, session.PosterPath, payload.IncidentID, payload.IncidentType, payload.StoreID, payload.CallbackURL); err != nil {
+		c.IndentedJSON(500, VSSRecordingResponse{
+			Success: false,
+			Message: "Failed to queue upload",
+			Error:   err.Error(),
+		})
+		requestLogger.WithFields(logrus.Fields{"call": "QueueUpload"}).Errorln(err.Error())
+		return
+	}
+
+	c.IndentedJSON(200, VSSRecordingResponse{
+		Success: true,
+		Message: "Upload queued for background processing",
+	})
+
+	requestLogger.WithFields(logrus.Fields{
+		"session_id":    session.ID,
+		"incident_id":   payload.IncidentID,
+		"incident_type": payload.IncidentType,
+		"store_id":      payload.StoreID,
+	}).Infoln("Upload queued successfully")
 }
 
 // HTTPAPIServerStopRecording stops current recording and organizes with incident details
 func HTTPAPIServerStopRecording(c *gin.Context) {
+	streamID := c.Param("uuid")
+	channelID := c.Param("channel")
+
 	requestLogger := log.WithFields(logrus.Fields{
 		"module":  "http_recording",
-		"stream":  c.Param("uuid"),
-		"channel": c.Param("channel"),
+		"stream":  streamID,
+		"channel": channelID,
 		"func":    "HTTPAPIServerStopRecording",
 	})
 
@@ -188,108 +342,145 @@ func HTTPAPIServerStopRecording(c *gin.Context) {
 	hasIncidentDetails := payload.IncidentID != "" && payload.StoreID != "" && 
 		payload.IncidentType != "" && payload.CallbackURL != ""
 
+	var session *RecordingSession
+	var newSession *RecordingSession
+	var err error
+	var message string
+
 	if hasIncidentDetails {
-		session, newSession, err := recordingManager.StopRecordingWithNext(
-			c.Param("uuid"), 
-			c.Param("channel"), 
-			payload.IncidentID,
-			payload.StoreID,
-			payload.IncidentType,
-			payload.CallbackURL,
-			payload.IsStartNext,
-		)
-		if err != nil {
-			c.IndentedJSON(400, VSSRecordingResponse{
-				Success: false,
-				Message: "Failed to stop recording with incident details",
-				Error:   err.Error(),
-			})
-			requestLogger.WithFields(logrus.Fields{
-				"call": "StopRecordingWithNext",
-			}).Errorln(err.Error())
-			return
-		}
-
-		message := fmt.Sprintf("Recording stopped and organized into VSS structure (/vss/alerts/%s/%s/). Video and poster uploaded to Digital Ocean Spaces and callback sent to %s with incidentId: %s", 
-			convertIncidentType(payload.IncidentType), payload.StoreID, payload.CallbackURL, payload.IncidentID)
-		
-		if payload.IsStartNext && newSession != nil {
-			message += fmt.Sprintf(". New recording started automatically (session: %s)", newSession.ID)
-		}
-
-		response := VSSRecordingResponse{
-			Success: true,
-			Message: message,
-			Session: session,
-		}
-
-		if newSession != nil {
-			response.NewSession = newSession
-		}
-
-		c.IndentedJSON(200, response)
-
-		requestLogger.WithFields(logrus.Fields{
-			"session_id":    session.ID,
-			"incident_id":   payload.IncidentID,
-			"callback_url":  payload.CallbackURL,
-			"store_id":      payload.StoreID,
-			"incident_type": payload.IncidentType,
-			"is_start_next": payload.IsStartNext,
-			"new_session_id": func() string {
-				if newSession != nil {
-					return newSession.ID
+		if payload.IsStartNext {
+			session, newSession, err = recordingManager.StopRecordingWithNext(
+				streamID, channelID, payload.IncidentID, payload.StoreID, payload.IncidentType, payload.CallbackURL, true)
+			if err != nil {
+				if session == nil && newSession == nil {
+					c.IndentedJSON(200, VSSRecordingResponse{
+						Success: true,
+						Message: "No active recording found for stream, new recording started",
+					})
+					requestLogger.Warnln("No active recording found")
+					return
 				}
-				return ""
-			}(),
-		}).Infoln("Recording stopped with incident details - VSS organization and upload scheduled")
+			}
+			message = "Recording stopped and organized into VSS structure. Files queued for upload. New recording started automatically"
+			if newSession != nil {
+				message += " (session: " + newSession.ID + ")"
+			}
+		} else {
+			session, _, err = recordingManager.StopRecordingWithNext(
+				streamID, channelID, payload.IncidentID, payload.StoreID, payload.IncidentType, payload.CallbackURL, false)
+			if err != nil {
+				if session == nil {
+					c.IndentedJSON(200, VSSRecordingResponse{
+						Success: true,
+						Message: "No active recording found for stream",
+					})
+					requestLogger.Warnln("No active recording found")
+					return
+				}
+			}
+			message = "Recording stopped and organized into VSS structure. Files queued for upload."
+		}
 	} else {
-		session, newSession, err := recordingManager.StopRecordingNoIncidentWithNext(
-			c.Param("uuid"), 
-			c.Param("channel"),
-			payload.IsStartNext,
-		)
-
-		if err != nil {
-			c.IndentedJSON(400, VSSRecordingResponse{
-				Success: false,
-				Message: "Failed to stop recording",
-				Error:   err.Error(),
-			})
-			requestLogger.WithFields(logrus.Fields{
-				"call": "StopRecordingNoIncidentWithNext",
-			}).Errorln(err.Error())
-			return
-		}
-
-		message := "Recording stopped and temporary files cleaned up. No incident generated."
-		if payload.IsStartNext && newSession != nil {
-			message += fmt.Sprintf(" New recording started automatically (session: %s)", newSession.ID)
-		}
-
-		response := VSSRecordingResponse{
-			Success: true,
-			Message: message,
-			Session: session,
-		}
-
-		if newSession != nil {
-			response.NewSession = newSession
-		}
-
-		c.IndentedJSON(200, response)
-
-		requestLogger.WithFields(logrus.Fields{
-			"session_id": session.ID,
-			"is_start_next": payload.IsStartNext,
-			"new_session_id": func() string {
-				if newSession != nil {
-					return newSession.ID
+		if payload.IsStartNext {
+			session, newSession, err = recordingManager.StopRecordingNoIncidentWithNext(streamID, channelID, true)
+			if err != nil {
+				if session == nil && newSession == nil {
+					c.IndentedJSON(200, VSSRecordingResponse{
+						Success: true,
+						Message: "No active recording found for stream, new recording started",
+					})
+					requestLogger.Warnln("No active recording found")
+					return
 				}
-				return ""
-			}(),
-		}).Infoln("Recording stopped without incident - temporary files cleaned up")
+			}
+			message = "Recording stopped and temporary files cleaned up. New recording started automatically"
+			if newSession != nil {
+				message += " (session: " + newSession.ID + ")"
+			}
+		} else {
+			session, _, err := recordingManager.StopRecordingNoIncidentWithNext(streamID, channelID, false)
+			if err != nil {
+				if session == nil {
+					c.IndentedJSON(200, VSSRecordingResponse{
+						Success: true,
+						Message: "No active recording found for stream",
+					})
+					requestLogger.Warnln("No active recording found")
+					return
+				}
+			}
+			message = "Recording stopped and temporary files cleaned up."
+		}
 	}
+
+	response := VSSRecordingResponse{
+		Success: true,
+		Message: message,
+		Session: session,
+	}
+
+	if newSession != nil {
+		response.NewSession = newSession
+	}
+
+	c.IndentedJSON(200, response)
+
+	requestLogger.WithFields(logrus.Fields{
+		"session_id":         func() string { if session != nil { return session.ID } else { return "none" } }(),
+		"has_incident":       hasIncidentDetails,
+		"is_start_next":      payload.IsStartNext,
+		"new_session_id":     func() string { if newSession != nil { return newSession.ID } else { return "none" } }(),
+		"stop_duration":      func() string { if session != nil { return session.StopDuration.String() } else { return "n/a" } }(),
+		"start_duration":     func() string { if newSession != nil { return newSession.StartDuration.String() } else { return "n/a" } }(),
+	}).Infoln("Recording stopped successfully")
+}
+
+// HTTPAPIServerDeleteRecording handles deleting recording files when no incident was created
+func HTTPAPIServerDeleteRecording(c *gin.Context) {
+	streamID := c.Param("uuid")
+	channelID := c.Param("channel")
+
+	requestLogger := log.WithFields(logrus.Fields{
+		"module":  "http_recording",
+		"stream":  streamID,
+		"channel": channelID,
+		"func":    "HTTPAPIServerDeleteRecording",
+	})
+
+	requestLogger.Infoln("Delete previous recording files request")
+
+	// Get the current recording session to find the previous files
+	session, err := recordingManager.GetRecordingStatus(streamID, channelID)
+	if err != nil {
+		c.IndentedJSON(404, VSSRecordingResponse{
+			Success: false,
+			Message: "No active recording session found for this stream/channel",
+			Error:   err.Error(),
+		})
+		requestLogger.WithFields(logrus.Fields{"call": "GetRecordingStatus"}).Errorln(err.Error())
+		return
+	}
+
+	// Queue the file deletion in background
+	go func() {
+		if err := recordingManager.DeletePreviousRecordingFiles(session.ID); err != nil {
+			requestLogger.WithFields(logrus.Fields{
+				"session_id": session.ID,
+				"error":      err.Error(),
+			}).Errorln("Failed to delete previous recording files")
+		} else {
+			requestLogger.WithFields(logrus.Fields{
+				"session_id": session.ID,
+			}).Infoln("Previous recording files deleted successfully")
+		}
+	}()
+
+	c.IndentedJSON(200, VSSRecordingResponse{
+		Success: true,
+		Message: "Previous recording files deletion queued for background processing",
+	})
+
+	requestLogger.Infoln("Delete request queued successfully")
 }
 
 // HTTPAPIServerRemoveRecording completely stops recording and removes stream
@@ -354,9 +545,11 @@ func HTTPAPIServerRecordingStatus(c *gin.Context) {
 	})
 
 	requestLogger.WithFields(logrus.Fields{
-		"session_id": session.ID,
-		"is_active":  session.Status == "recording",
-		"fps":        session.FPS,
-		"codec":      session.Codec,
+		"session_id":     session.ID,
+		"is_active":      session.Status == "recording",
+		"fps":            session.FPS,
+		"codec":          session.Codec,
+		"start_duration": session.StartDuration.String(),
+		"stop_duration":  session.StopDuration.String(),
 	}).Debugln("Recording status retrieved successfully")
 }

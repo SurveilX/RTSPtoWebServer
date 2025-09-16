@@ -12,13 +12,16 @@ import (
 // HTTPAPIServerStreamSaveToMP4 func
 func HTTPAPIServerStreamSaveToMP4(c *gin.Context) {
 	var err error
+	safeContext := c.Copy()
 
 	requestLogger := log.WithFields(logrus.Fields{
 		"module":  "http_save_mp4",
-		"stream":  c.Param("uuid"),
-		"channel": c.Param("channel"),
+		"stream":  safeContext.Param("uuid"),
+		"channel": safeContext.Param("channel"),
 		"func":    "HTTPAPIServerStreamSaveToMP4",
 	})
+
+	requestLogger.WithFields(logrus.Fields{}).Infoln("Start recording MP4")
 
 	defer func() {
 		if err != nil {
@@ -28,14 +31,14 @@ func HTTPAPIServerStreamSaveToMP4(c *gin.Context) {
 		}
 	}()
 
-	if !Storage.StreamChannelExist(c.Param("uuid"), c.Param("channel")) {
+	if !Storage.StreamChannelExist(safeContext.Param("uuid"), safeContext.Param("channel")) {
 		requestLogger.WithFields(logrus.Fields{
 			"call": "StreamChannelExist",
 		}).Errorln(ErrorStreamNotFound.Error())
 		return
 	}
 
-	if !RemoteAuthorization("save", c.Param("uuid"), c.Param("channel"), c.Query("token"), c.ClientIP()) {
+	if !RemoteAuthorization("save", safeContext.Param("uuid"), safeContext.Param("channel"), safeContext.Query("token"), safeContext.ClientIP()) {
 		requestLogger.WithFields(logrus.Fields{
 			"call": "RemoteAuthorization",
 		}).Errorln(ErrorStreamUnauthorized.Error())
@@ -43,8 +46,8 @@ func HTTPAPIServerStreamSaveToMP4(c *gin.Context) {
 	}
 	c.Writer.Write([]byte("await save started"))
 	go func() {
-		Storage.StreamChannelRun(c.Param("uuid"), c.Param("channel"))
-		cid, ch, _, err := Storage.ClientAdd(c.Param("uuid"), c.Param("channel"), MSE)
+		Storage.StreamChannelRun(safeContext.Param("uuid"), safeContext.Param("channel"))
+		cid, ch, _, err := Storage.ClientAdd(safeContext.Param("uuid"), safeContext.Param("channel"), MSE)
 		if err != nil {
 			requestLogger.WithFields(logrus.Fields{
 				"call": "ClientAdd",
@@ -60,13 +63,13 @@ func HTTPAPIServerStreamSaveToMP4(c *gin.Context) {
 			}).Errorln(err.Error())
 			return
 		}
-		err = os.MkdirAll(fmt.Sprintf("save/%s/%s/", c.Param("uuid"), c.Param("channel")), 0755)
+		err = os.MkdirAll(fmt.Sprintf("save/%s/%s/", safeContext.Param("uuid"), safeContext.Param("channel")), 0755)
 		if err != nil {
 			requestLogger.WithFields(logrus.Fields{
 				"call": "MkdirAll",
 			}).Errorln(err.Error())
 		}
-		f, err := os.Create(fmt.Sprintf("save/%s/%s/%s.mp4", c.Param("uuid"), c.Param("channel"), time.Now().String()))
+		f, err := os.Create(fmt.Sprintf("save/%s/%s/%s.mp4", safeContext.Param("uuid"), safeContext.Param("channel"), time.Now().String()))
 		if err != nil {
 			requestLogger.WithFields(logrus.Fields{
 				"call": "Create",
@@ -86,7 +89,7 @@ func HTTPAPIServerStreamSaveToMP4(c *gin.Context) {
 
 		var videoStart bool
 		controlExit := make(chan bool, 10)
-		dur, err := time.ParseDuration(c.Param("duration"))
+		dur, err := time.ParseDuration(safeContext.Param("duration"))
 		if err != nil {
 			requestLogger.WithFields(logrus.Fields{
 				"call": "ParseDuration",

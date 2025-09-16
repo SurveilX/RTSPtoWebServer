@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,6 +68,8 @@ func uploadVSSToDigitalOcean(session *RecordingSession) (string, string, error) 
 		"store_id":      session.StoreID,
 		"bucket":        doConfig.Bucket,
 		"endpoint":      doConfig.Endpoint,
+		"is_vss_video":  strings.Contains(session.FilePath, "vss/"),
+		"is_vss_poster": strings.Contains(session.PosterPath, "vss/"),
 	}).Infoln("Starting VSS upload to Digital Ocean Spaces")
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
@@ -85,24 +89,47 @@ func uploadVSSToDigitalOcean(session *RecordingSession) (string, string, error) 
 		o.UsePathStyle = false
 	})
 
-	clipURL, err := uploadVSSFile(client, doConfig.Bucket, session.FilePath, "video/mp4", session)
-	if err != nil {
+	var clipURL, posterURL string
+	var uploadErr error
+
+	clipURL, uploadErr = uploadVSSFile(client, doConfig.Bucket, session.FilePath, "video/mp4", session)
+	if uploadErr != nil {
 		session.mutex.Lock()
 		session.Status = "upload_failed"
 		session.mutex.Unlock()
-		return "", "", fmt.Errorf("failed to upload video: %v", err)
-	}
+		
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"error":      uploadErr.Error(),
+		}).Errorln("Failed to upload video file")
 
-	var posterURL string
-	if _, err := os.Stat(session.PosterPath); err == nil {
-		posterURL, err = uploadVSSFile(client, doConfig.Bucket, session.PosterPath, "image/jpeg", session)
-		if err != nil {
+		if cleanupErr := cleanupLocalFiles(session); cleanupErr != nil {
 			log.WithFields(logrus.Fields{
 				"module":     "recording",
 				"session_id": session.ID,
-				"error":      err.Error(),
+				"error":      cleanupErr.Error(),
+			}).Warnln("Failed to cleanup local files after upload failure")
+		}
+		
+		return "", "", fmt.Errorf("failed to upload video: %v", uploadErr)
+	}
+
+	if _, err := os.Stat(session.PosterPath); err == nil {
+		posterURL, uploadErr = uploadVSSFile(client, doConfig.Bucket, session.PosterPath, "image/jpeg", session)
+		if uploadErr != nil {
+			log.WithFields(logrus.Fields{
+				"module":     "recording",
+				"session_id": session.ID,
+				"error":      uploadErr.Error(),
 			}).Warnln("Failed to upload poster, continuing with video only")
 		}
+	} else {
+		log.WithFields(logrus.Fields{
+			"module":     "recording",
+			"session_id": session.ID,
+			"poster_path": session.PosterPath,
+		}).Infoln("Poster file does not exist, skipping poster upload")
 	}
 
 	session.mutex.Lock()
@@ -224,7 +251,36 @@ func uploadVSSFile(client *s3.Client, bucket, filePath, contentType string, sess
 		return "", fmt.Errorf("failed to get file info: %v", err)
 	}
 
-	objectKey := filepath.ToSlash(strings.TrimPrefix(filePath, "/"))
+	var objectKey string
+	
+	if strings.Contains(filePath, "vss/") {
+		objectKey = filepath.ToSlash(strings.TrimPrefix(filePath, "/"))
+	} else {
+		currentTime := time.Now()
+		shortUUID := generateShortUUID()
+		convertedIncidentType := convertIncidentType(session.IncidentType)
+		
+		if strings.Contains(filePath, ".mp4") {
+			videoFileName := fmt.Sprintf("%s%s.mp4", 
+				currentTime.Format("20060102_150405"), 
+				shortUUID)
+			objectKey = fmt.Sprintf("vss/alerts/%s/%s/%s", convertedIncidentType, session.StoreID, videoFileName)
+		} else {
+			posterFileName := fmt.Sprintf("%s_%s.jpg", 
+				currentTime.Format("20060102150405"), 
+				shortUUID)
+			objectKey = fmt.Sprintf("vss/posters/%s/%s/%s", convertedIncidentType, session.StoreID, posterFileName)
+		}
+	}
+
+	log.WithFields(logrus.Fields{
+		"module":       "recording",
+		"session_id":   session.ID,
+		"file_path":    filePath,
+		"object_key":   objectKey,
+		"file_size":    fileInfo.Size(),
+		"content_type": contentType,
+	}).Infoln("Uploading file to Digital Ocean Spaces")
 
 	metadata := map[string]string{
 		"stream-id":        session.StreamID,
@@ -238,11 +294,16 @@ func uploadVSSFile(client *s3.Client, bucket, filePath, contentType string, sess
 		"recording-method": map[bool]string{true: "ffmpeg", false: "native"}[session.UseFFmpeg],
 	}
 
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file content: %v", err)
+	}
+
 	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket:        aws.String(bucket),
 		Key:           aws.String(objectKey),
-		Body:          file,
-		ContentLength: aws.Int64(fileInfo.Size()),
+		Body:          bytes.NewReader(fileContent),
+		ContentLength: aws.Int64(int64(len(fileContent))),
 		ContentType:   aws.String(contentType),
 		Metadata:      metadata,
 		ACL:           types.ObjectCannedACLPublicRead,
@@ -259,10 +320,11 @@ func uploadVSSFile(client *s3.Client, bucket, filePath, contentType string, sess
 		"module":      "recording",
 		"session_id":  session.ID,
 		"object_key":  objectKey,
-		"file_size":   fileInfo.Size(),
+		"file_size":   len(fileContent),
 		"public_url":  publicURL,
 		"content_type": contentType,
-	}).Debugln("File uploaded to Digital Ocean Spaces")
+		"acl":         "public-read",
+	}).Infoln("File uploaded to Digital Ocean Spaces with public access")
 
 	return publicURL, nil
 }
