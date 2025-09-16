@@ -51,6 +51,17 @@ type StorageST struct {
 	ChannelDefaults ChannelST           `json:"channel_defaults,omitempty" groups:"api,config"`
 }
 
+// ServerConfigST server configuration file structure (read-only)
+type ServerConfigST struct {
+	Server          ServerST  `json:"server" groups:"config"`
+	ChannelDefaults ChannelST `json:"channel_defaults" groups:"config"`
+}
+
+// StreamsConfigST streams configuration file structure (writable)
+type StreamsConfigST struct {
+	Streams map[string]StreamST `json:"streams" groups:"config"`
+}
+
 // ServerST server storage section
 type ServerST struct {
 	Debug              bool         `json:"debug" groups:"api,config"`
