@@ -57,6 +57,29 @@ spec:
       #     items:
       #     - key: config-json
       #       path: config.json
+      # Tailscale sidecar: shares this pod's network namespace so rtspchecker can reach a
+      # camera's tailnet (100.x) address directly, with no cluster-network routing involved.
+      - name: tailscale
+        image: {{ .Values.tailscaleImage }}
+        imagePullPolicy: Always
+        env:
+          {{- range $name, $item := .Values.tailscaleEnv }}
+          - name: {{ $name }}
+            {{- $item | toYaml | nindent 12 }}
+          {{- end }}
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+              - NET_RAW
+        volumeMounts:
+        - name: dev-net-tun
+          mountPath: /dev/net/tun
+      volumes:
+      - name: dev-net-tun
+        hostPath:
+          path: /dev/net/tun
+          type: CharDevice
   strategy:
     type: RollingUpdate
     rollingUpdate:

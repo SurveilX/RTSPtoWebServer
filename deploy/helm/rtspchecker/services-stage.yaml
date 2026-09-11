@@ -37,3 +37,21 @@ env:
       secretKeyRef:
         name: rtspchecker-do-config
         key: DO_SPACES_ACCESS_KEY
+# Tailscale sidecar — lets this pod reach a camera's tailnet (100.x) address directly. Pinned
+# to match the version already deployed for rtsp-clipper/stream-recorder in the main plexor repo
+# (checked live via the Docker Hub API when first chosen there) — bump deliberately, together.
+tailscaleImage: tailscale/tailscale:v1.102.3
+tailscaleEnv:
+  TS_AUTHKEY:
+    valueFrom:
+      secretKeyRef:
+        name: tailscale-oauth
+        key: client_secret
+  TS_EXTRA_ARGS:
+    value: "--advertise-tags=tag:bridge"
+  TS_KUBE_SECRET:
+    value: "tailscale-state-rtspchecker"
+  TS_USERSPACE:
+    value: "false"
+  TS_HOSTNAME:
+    value: "rtspchecker"
