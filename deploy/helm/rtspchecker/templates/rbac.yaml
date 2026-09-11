@@ -1,0 +1,30 @@
+---
+# Lets the default ServiceAccount (rtspchecker has no dedicated one — confirmed live via
+# `kubectl get pod ... -o jsonpath='{.spec.serviceAccountName}'` before writing this) read/write
+# the Kubernetes Secret its Tailscale sidecar uses to persist its tailnet identity
+# (TS_KUBE_SECRET) — without this, every pod restart would register as a brand-new device
+# instead of reusing the same one.
+#
+# `create` cannot be scoped to a single resourceName in Kubernetes RBAC (that restriction only
+# applies to verbs acting on an object that already exists), so this grants secrets access across
+# the namespace rather than to just the one state secret.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rtspchecker-tailscale
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rtspchecker-tailscale
+subjects:
+  - kind: ServiceAccount
+    name: default
+roleRef:
+  kind: Role
+  name: rtspchecker-tailscale
+  apiGroup: rbac.authorization.k8s.io
