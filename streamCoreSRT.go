@@ -91,14 +91,24 @@ func StreamServerRunStreamSRT(streamID string, channelID string, opt *ChannelST)
 	baseLogger.WithFields(logrus.Fields{"call": "Start"}).Infoln("Success connection SRT")
 
 	// Started here, not at the top of the function: on this codebase's RTSP/RTMP paths, dial is
-	// bounded to 3s so it never eats meaningfully into these 20s budgets. SRT's dial + the PAT/PMT
+	// bounded to 3s so it never eats meaningfully into these budgets. SRT's dial + the PAT/PMT
 	// probe above have both been observed taking 20-35s on a real, lossy relayed link (Tailscale
 	// DERP) - long enough that a timer started before either would already be expired by the time
 	// this loop's first iteration runs, killing every connection within ~1-2s of it succeeding
 	// regardless of stream health. These timers exist to catch a source that goes quiet AFTER we
 	// start actually reading from it, not to time the connection setup itself.
-	keyTest := time.NewTimer(20 * time.Second)
-	checkClients := time.NewTimer(20 * time.Second)
+	//
+	// srtNoVideoTimeout is 60s, not the RTSP/RTMP paths' 20s, and deliberately so: measured
+	// directly against a real SRT source (ffprobe on the raw stream), this link's steady-state
+	// keyframe interval is a normal 4s, but the same link was independently observed dropping and
+	// corrupting packets badly enough (real "RCV-DROPPED"/decode errors) to lose 5+ consecutive
+	// keyframes in a row - a known, already-documented transient property of this Tailscale relay,
+	// not a defect in this ingestion path. 60s tolerates that without silently hiding a camera
+	// that's actually gone dark - it's still a bounded watchdog, just sized to the link SRT exists
+	// to serve rather than to a well-behaved local RTSP feed's assumptions.
+	const srtNoVideoTimeout = 60 * time.Second
+	keyTest := time.NewTimer(srtNoVideoTimeout)
+	checkClients := time.NewTimer(srtNoVideoTimeout)
 
 	var ProbeCount int
 	var ProbeFrame int
@@ -131,7 +141,7 @@ func StreamServerRunStreamSRT(streamID string, channelID string, opt *ChannelST)
 			if opt.OnDemand && !Storage.ClientHas(streamID, channelID) {
 				return 1, ErrorStreamNoClients
 			}
-			checkClients.Reset(20 * time.Second)
+			checkClients.Reset(srtNoVideoTimeout)
 		// Check stream sends key
 		case <-keyTest.C:
 			return 0, ErrorStreamNoVideo
@@ -161,7 +171,7 @@ func StreamServerRunStreamSRT(streamID string, channelID string, opt *ChannelST)
 			}
 
 			if packetAV.IsKeyFrame {
-				keyTest.Reset(20 * time.Second)
+				keyTest.Reset(srtNoVideoTimeout)
 				if preKeyTS > 0 {
 					Storage.StreamHLSAdd(streamID, channelID, Seq, packetAV.Time-preKeyTS)
 					Seq = []*av.Packet{}
