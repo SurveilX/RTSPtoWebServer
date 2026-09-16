@@ -63,8 +63,13 @@ func StreamServerRunStreamDo(streamID string, channelID string) {
 
 //StreamServerRunStream core stream
 func StreamServerRunStream(streamID string, channelID string, opt *ChannelST) (int, error) {
-	if url, err := url.Parse(opt.URL); err == nil && strings.ToLower(url.Scheme) == "rtmp" {
-		return StreamServerRunStreamRTMP(streamID, channelID, opt)
+	if parsedURL, err := url.Parse(opt.URL); err == nil {
+		switch strings.ToLower(parsedURL.Scheme) {
+		case "rtmp":
+			return StreamServerRunStreamRTMP(streamID, channelID, opt)
+		case "srt":
+			return StreamServerRunStreamSRT(streamID, channelID, opt)
+		}
 	}
 	keyTest := time.NewTimer(20 * time.Second)
 	checkClients := time.NewTimer(20 * time.Second)
