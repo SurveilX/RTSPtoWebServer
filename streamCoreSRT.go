@@ -20,8 +20,6 @@ import (
 // shaped exactly like the RTMP connection's own, so the two paths share almost their entire body;
 // this is deliberate reuse of an already-proven pattern, not a new design.
 func StreamServerRunStreamSRT(streamID string, channelID string, opt *ChannelST) (int, error) {
-	keyTest := time.NewTimer(20 * time.Second)
-	checkClients := time.NewTimer(20 * time.Second)
 	OutgoingPacketQueue := make(chan *av.Packet, 1000)
 	Signals := make(chan int, 100)
 	var start bool
@@ -91,6 +89,16 @@ func StreamServerRunStreamSRT(streamID string, channelID string, opt *ChannelST)
 	Storage.StreamChannelCodecsUpdate(streamID, channelID, codecs, []byte{})
 
 	baseLogger.WithFields(logrus.Fields{"call": "Start"}).Infoln("Success connection SRT")
+
+	// Started here, not at the top of the function: on this codebase's RTSP/RTMP paths, dial is
+	// bounded to 3s so it never eats meaningfully into these 20s budgets. SRT's dial + the PAT/PMT
+	// probe above have both been observed taking 20-35s on a real, lossy relayed link (Tailscale
+	// DERP) - long enough that a timer started before either would already be expired by the time
+	// this loop's first iteration runs, killing every connection within ~1-2s of it succeeding
+	// regardless of stream health. These timers exist to catch a source that goes quiet AFTER we
+	// start actually reading from it, not to time the connection setup itself.
+	keyTest := time.NewTimer(20 * time.Second)
+	checkClients := time.NewTimer(20 * time.Second)
 
 	var ProbeCount int
 	var ProbeFrame int
