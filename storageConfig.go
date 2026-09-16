@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/go-version"
@@ -25,7 +26,17 @@ func NewStreamCore() *StorageST {
 	flag.BoolVar(&debug, "debug", true, "set debug mode")
 	flag.StringVar(&configFile, "config", "config.json", "server config file path (read-only)")
 	flag.StringVar(&streamsConfigFile, "streams-config", "streams.json", "streams config file path (writable)")
-	flag.Parse()
+	// NewStreamCore runs from a package-level var initializer (Storage = NewStreamCore(), in
+	// storageStruct.go), which executes before main() in a normal binary AND before any test in
+	// a test binary. flag.Parse() there previously ran unconditionally, consuming os.Args before
+	// the testing package gets a chance to register its own -test.* flags — every `go test` in
+	// this repo failed on "flag provided but not defined: -test.testlogfile" as a result, which
+	// is the actual reason this repo has never had a test file. The BoolVar/StringVar
+	// registrations above are harmless either way (they only set defaults); only the Parse call
+	// itself needs to be skipped under test.
+	if !testing.Testing() {
+		flag.Parse()
+	}
 
 	var storage StorageST
 
